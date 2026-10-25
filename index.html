@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f16">
+<title>Song Arena — your Top 10 of all time</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,800&display=swap">
+<style>
+:root{
+  --bg:#0d0f16; --surface:#161925; --surface2:#1e2232; --ink:#f4f5fa; --muted:#9aa1b8; --line:#272c3d; --soft:#232838;
+  --accent:#ff4d6d; --accent-ink:#ffffff; --teal:#35d1c5; --gold:#f5c451; --focus:#8fb3ff;
+  color-scheme:dark; box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{ scroll-padding-top:env(safe-area-inset-top,0px); height:100%; }
+*,*::before,*::after{ box-sizing:inherit; }
+body{ margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family:"Bricolage Grotesque","Helvetica Neue",Arial,system-ui,sans-serif; font-size:16px; line-height:1.45; -webkit-tap-highlight-color:transparent; }
+body::before{ content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:10; background:var(--bg); }
+button{ font:inherit; color:inherit; }
+button:focus-visible,a:focus-visible,input:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+img{ max-width:100%; }
+
+/* header */
+.top{ position:sticky; top:env(safe-area-inset-top,0px); z-index:9; background:rgba(13,15,22,.86); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid var(--line); }
+.top-in{ max-width:960px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.brand{ font-weight:800; font-size:18px; letter-spacing:-.01em; display:flex; align-items:center; gap:8px; }
+.brand i{ width:16px; height:16px; border-radius:50%; background:conic-gradient(from 20deg,var(--accent),#ff9a62,var(--accent)); display:inline-block; box-shadow:inset 0 0 0 5px var(--bg); }
+.steps{ display:flex; gap:2px; margin-left:auto; }
+.step{ border:0; background:transparent; padding:7px 10px; border-radius:999px; font-weight:600; color:var(--muted); cursor:pointer; font-size:14px; }
+.step[aria-current="step"]{ background:var(--ink); color:var(--bg); }
+.step:disabled{ opacity:.35; cursor:not-allowed; }
+.ghost{ border:1px solid var(--line); background:transparent; padding:7px 12px; border-radius:999px; cursor:pointer; font-weight:500; color:var(--muted); }
+.ghost:hover{ color:var(--ink); border-color:var(--muted); }
+@media (max-width:640px){ .steps{ width:100%; order:3; margin-left:0; } .step{ flex:1; text-align:center; padding:7px 2px; font-size:12px; } }
+
+/* layout */
+.wrap{ max-width:960px; margin:0 auto; padding:22px 16px 90px; }
+h1{ font-size:clamp(28px,6vw,44px); font-weight:800; letter-spacing:-.025em; line-height:1.02; margin:0 0 8px; }
+h2{ font-size:19px; font-weight:800; letter-spacing:-.01em; margin:26px 0 8px; }
+.lede{ color:var(--muted); font-size:16px; max-width:62ch; margin:0 0 14px; }
+.lede b{ color:var(--ink); font-weight:600; }
+.meta{ color:var(--muted); font-size:14px; }
+.comp{ font-size:12px; color:var(--muted); margin-top:6px; }
+.stat{ display:flex; gap:14px; flex-wrap:wrap; font-size:14px; color:var(--muted); }
+.stat b{ color:var(--ink); font-weight:700; }
+.bar{ height:6px; border-radius:999px; background:var(--soft); overflow:hidden; margin:10px 0 6px; }
+.bar i{ display:block; height:100%; background:linear-gradient(90deg,var(--accent),#ff9a62); border-radius:999px; transition:width .25s; }
+.bar.teal i{ background:linear-gradient(90deg,var(--teal),#7cf0e6); }
+.card{ background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:20px; }
+.notice{ background:var(--soft); border-radius:12px; padding:12px 14px; font-size:14px; margin-top:12px; }
+.notice.err{ background:rgba(255,77,109,.14); }
+.loading{ color:var(--muted); font-size:14px; display:flex; align-items:center; gap:8px; margin-top:10px; }
+.spin{ width:14px; height:14px; border:2px solid var(--line); border-top-color:var(--teal); border-radius:50%; animation:sp .8s linear infinite; flex:none; }
+@keyframes sp{ to{ transform:rotate(360deg);} }
+.empty{ padding:36px 24px; text-align:center; color:var(--muted); }
+kbd{ font:inherit; font-size:12px; border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:0 6px; background:var(--soft); }
+.hint{ color:var(--muted); font-size:13px; margin-top:12px; }
+
+/* chips & buttons */
+.chips{ display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 14px; }
+.chip{ border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:9px 15px; cursor:pointer; font-weight:600; font-size:15px; }
+.chip[aria-pressed="true"]{ background:var(--ink); color:var(--bg); border-color:transparent; }
+.chip.more{ border-style:dashed; color:var(--muted); font-weight:500; }
+.chip b{ font-weight:700; }
+.btn{ appearance:none; border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:14px 14px; border-radius:16px; font-weight:700; cursor:pointer; font-size:16px; }
+.btn small{ display:block; font-weight:500; color:var(--muted); font-size:12px; margin-top:2px; }
+.btn.primary{ background:var(--accent); color:var(--accent-ink); border-color:transparent; }
+.btn.primary small{ color:rgba(255,255,255,.85); }
+.btn.wide{ width:100%; margin-top:12px; }
+.btn:disabled{ opacity:.4; cursor:not-allowed; }
+.btn:active:not(:disabled){ transform:translateY(1px); }
+.btnrow{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:12px; }
+.row-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+.link{ background:none; border:0; padding:6px 2px; color:var(--muted); text-decoration:underline; cursor:pointer; font-weight:500; }
+.link:hover{ color:var(--ink); }
+.pill{ border:1px solid var(--line); border-radius:999px; padding:6px 12px; background:var(--surface); cursor:pointer; font-size:14px; font-weight:600; }
+.pill[data-on="1"]{ background:var(--accent); color:#fff; border-color:transparent; }
+.tag{ display:inline-block; background:var(--soft); border-radius:999px; padding:4px 10px; font-size:14px; margin:4px 6px 0 0; }
+.tag b{ font-weight:700; }
+
+/* artist tiles */
+.glabel{ font-size:13px; color:var(--muted); margin:16px 0 6px; font-weight:700; letter-spacing:.01em; }
+.tiles{ display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:10px; }
+.tile{ border:0; background:transparent; padding:0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
+.tile .ph{ width:76px; height:76px; border-radius:50%; overflow:hidden; display:grid; place-items:center; font-weight:800; font-size:22px; color:#fff; background:linear-gradient(135deg,#3a3f5a,#20233a); box-shadow:0 0 0 2px transparent; transition:box-shadow .12s, transform .12s; position:relative; }
+.tile .ph img{ width:100%; height:100%; object-fit:cover; display:block; }
+.tile .tn{ font-size:13px; font-weight:600; line-height:1.15; color:var(--ink); max-width:100px; overflow-wrap:anywhere; }
+.tile[aria-pressed="true"] .ph{ box-shadow:0 0 0 3px var(--accent); transform:scale(1.04); }
+.tile[aria-pressed="true"] .ph::after{ content:"✓"; position:absolute; right:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%; background:var(--accent); color:#fff; font-size:14px; display:grid; place-items:center; box-shadow:0 0 0 3px var(--bg); }
+
+/* song cards: art first */
+.grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:12px; }
+@media (min-width:560px){ .grid{ grid-template-columns:repeat(3,1fr);} }
+@media (min-width:820px){ .grid{ grid-template-columns:repeat(4,1fr);} }
+.sc{ position:relative; border-radius:16px; overflow:hidden; cursor:pointer; background:var(--surface2); aspect-ratio:1; box-shadow:0 0 0 2px transparent; transition:box-shadow .12s, transform .12s; }
+.sc img{ width:100%; height:100%; object-fit:cover; display:block; }
+.sc .noart{ width:100%; height:100%; background:linear-gradient(135deg,#3a3f5a,#20233a); }
+.sc-body{ position:absolute; inset:auto 0 0 0; padding:38px 10px 10px; background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.55) 45%,rgba(0,0,0,.85) 100%); color:#fff; }
+.sc-t{ font-weight:800; font-size:15px; line-height:1.15; letter-spacing:-.01em; overflow-wrap:anywhere; text-shadow:0 1px 2px rgba(0,0,0,.6); }
+.sc-a{ color:rgba(255,255,255,.78); font-size:12px; margin-top:2px; overflow-wrap:anywhere; }
+.sc[data-loved="1"]{ box-shadow:0 0 0 3px var(--accent); transform:scale(.985); }
+.play{ width:40px; height:40px; border-radius:50%; border:0; background:rgba(0,0,0,.55); color:#fff; cursor:pointer; font-size:14px; display:grid; place-items:center; flex:none; backdrop-filter:blur(6px); }
+.play[data-on="1"]{ background:var(--teal); color:#0d0f16; }
+.play:disabled{ opacity:.3; cursor:default; }
+.sc .play{ position:absolute; left:8px; top:8px; }
+.heart{ position:absolute; right:8px; top:8px; width:40px; height:40px; border-radius:50%; border:0; background:rgba(0,0,0,.5); color:rgba(255,255,255,.9); font-size:19px; cursor:pointer; display:grid; place-items:center; backdrop-filter:blur(6px); }
+.sc[data-loved="1"] .heart{ background:var(--accent); color:#fff; }
+.thumb{ width:52px; height:52px; border-radius:10px; object-fit:cover; background:var(--surface2); display:block; }
+
+/* search */
+.searchbar{ display:flex; gap:8px; margin-top:10px; }
+.searchbar input{ flex:1; min-width:0; border:1px solid var(--line); border-radius:14px; padding:13px 14px; font:inherit; background:var(--surface); color:var(--ink); }
+.results{ list-style:none; padding:0; margin:8px 0 0; }
+.results li{ display:grid; grid-template-columns:52px 1fr auto; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); }
+.t{ font-weight:700; font-size:16px; letter-spacing:-.01em; overflow-wrap:anywhere; }
+.a{ color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+.side-foot{ display:flex; gap:8px; align-items:center; justify-content:center; }
+
+/* duel */
+.duel{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; align-items:start; position:relative; }
+.duel .vs{ position:absolute; left:50%; top:calc(50% - 22px); transform:translate(-50%,-50%); width:44px; height:44px; border-radius:50%; background:var(--bg); border:2px solid var(--line); display:grid; place-items:center; font-weight:800; font-size:14px; z-index:2; }
+.duel-card{ border:0; padding:0; background:transparent; width:100%; cursor:pointer; text-align:left; }
+.duel-card .art{ position:relative; border-radius:18px; overflow:hidden; aspect-ratio:1; background:var(--surface2); box-shadow:0 0 0 2px transparent; transition:transform .12s, box-shadow .12s; }
+.duel-card .art img{ width:100%; height:100%; object-fit:cover; display:block; }
+.duel-card:hover .art{ transform:scale(1.015); box-shadow:0 0 0 3px var(--accent); }
+.duel-card .rec{ position:absolute; left:8px; top:8px; background:rgba(0,0,0,.6); color:#fff; border-radius:999px; padding:3px 9px; font-size:12px; font-weight:700; backdrop-filter:blur(6px); }
+.duel-card .song-title{ font-size:clamp(16px,3.6vw,22px); font-weight:800; letter-spacing:-.015em; line-height:1.1; margin:10px 0 0; overflow-wrap:anywhere; }
+.duel-card .song-artist{ font-size:14px; color:var(--muted); margin:3px 0 0; }
+.side{ display:flex; flex-direction:column; gap:8px; }
+.alive{ font-size:13px; color:var(--muted); }
+
+/* list */
+.rows{ list-style:none; padding:0; margin:12px 0 0; }
+.row{ display:grid; grid-template-columns:34px 52px 1fr auto; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); }
+.row .rank{ font-weight:800; font-size:20px; color:var(--muted); text-align:right; letter-spacing:-.02em; }
+.row.r1 .rank{ color:var(--gold); } .row.r2 .rank,.row.r3 .rank{ color:var(--ink); }
+.row.topten .t{ font-size:17px; }
+.row.bench{ opacity:.72; } .row.bench .rank{ font-size:14px; } .row.bench .thumb{ width:40px; height:40px; }
+.row.bench{ grid-template-columns:34px 40px 1fr auto; }
+.arrows{ display:flex; gap:4px; }
+.arrows button{ border:1px solid var(--line); background:var(--surface); border-radius:8px; width:30px; height:30px; cursor:pointer; color:var(--muted); }
+.arrows button:hover{ color:var(--ink); border-color:var(--muted); }
+.podium{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
+.podium .p{ position:relative; border-radius:16px; overflow:hidden; aspect-ratio:1; background:var(--surface2); }
+.podium .p img{ width:100%; height:100%; object-fit:cover; display:block; }
+.podium .p .n{ position:absolute; left:8px; top:8px; width:28px; height:28px; border-radius:50%; background:var(--gold); color:#1a1300; font-weight:800; display:grid; place-items:center; font-size:14px; }
+.podium .p.p2 .n{ background:#d8dbe6; } .podium .p.p3 .n{ background:#d9a66c; }
+.podium .p .cap{ position:absolute; inset:auto 0 0 0; padding:28px 8px 8px; background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.85)); color:#fff; font-size:12px; font-weight:700; line-height:1.15; }
+.podium .p .cap span{ display:block; font-weight:500; color:rgba(255,255,255,.75); font-size:11px; }
+textarea.export{ width:100%; min-height:150px; margin-top:10px; border:1px solid var(--line); border-radius:12px; padding:12px; font:inherit; font-size:14px; background:var(--surface); color:var(--ink); }
+#toast{ position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%) translateY(20px); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:999px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .15s,transform .15s; z-index:20; max-width:90vw; text-align:center; }
+#toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="brand"><i></i> Song Arena</div>
+  <nav class="steps">
+    <button class="step" data-step="setup">Decades</button>
+    <button class="step" data-step="wall">Artists</button>
+    <button class="step" data-step="discover">Songs</button>
+    <button class="step" data-step="rank">Rank</button>
+    <button class="step" data-step="list">List</button>
+  </nav>
+  <button class="ghost" id="installBtn" type="button" hidden>Install app</button>
+  <button class="ghost" id="resetBtn" type="button">Start over</button>
+</div></header>
+<main class="wrap" id="app"></main>
+<div id="toast" role="status"></div>
+<script>
+/* ---------- Seeds: artist names tagged by genre, per decade. The catalog itself is live. ---------- */
+const SEEDS = {
+'1950s': 'Elvis Presley|rock,Chuck Berry|rock,Little Richard|rock,Buddy Holly|rock,Jerry Lee Lewis|rock,Bill Haley & His Comets|rock,Bo Diddley|rock,The Everly Brothers|rock,Ritchie Valens|rock,Johnny Cash|country,Hank Williams|country,Patsy Cline|country,Ray Charles|soul,Sam Cooke|soul,Fats Domino|rnb,The Platters|rnb,The Drifters|rnb,Lloyd Price|rnb,Frank Sinatra|pop,Nat King Cole|pop,Dean Martin|pop,Doris Day|pop,Peggy Lee|pop,Ella Fitzgerald|jazz,Billie Holiday|jazz,Miles Davis|jazz,Dave Brubeck|jazz,Louis Armstrong|jazz,Chet Baker|jazz,Muddy Waters|blues,Howlin\' Wolf|blues,B.B. King|blues,Édith Piaf|world,Harry Belafonte|world',
+'1960s': 'The Beatles|rock,The Rolling Stones|rock,The Who|rock,The Kinks|rock,The Doors|rock,Jimi Hendrix|rock,Cream|rock,Led Zeppelin|rock,Creedence Clearwater Revival|rock,The Beach Boys|pop,The Monkees|pop,The Ronettes|pop,Dusty Springfield|pop,Frank Sinatra|pop,Bob Dylan|folk,Simon & Garfunkel|folk,The Byrds|folk,Joni Mitchell|folk,Johnny Cash|country,Glen Campbell|country,Loretta Lynn|country,Aretha Franklin|soul,Otis Redding|soul,James Brown|soul,Marvin Gaye|soul,The Supremes|soul,The Temptations|soul,Stevie Wonder|soul,Sly & The Family Stone|soul,Nina Simone|jazz,John Coltrane|jazz,The Velvet Underground|alt,The Stooges|punk,Serge Gainsbourg|world,Jacques Brel|world,Toots & The Maytals|reggae',
+'1970s': 'Led Zeppelin|rock,Pink Floyd|rock,Queen|rock,David Bowie|rock,Fleetwood Mac|rock,Eagles|rock,Bruce Springsteen|rock,Lynyrd Skynyrd|rock,Aerosmith|rock,Kiss|rock,Santana|rock,Eric Clapton|rock,Rush|rock,Black Sabbath|metal,Deep Purple|metal,AC/DC|metal,Judas Priest|metal,Elton John|pop,ABBA|pop,Bee Gees|pop,Carpenters|pop,Billy Joel|pop,Stevie Wonder|soul,Marvin Gaye|soul,Al Green|soul,Earth, Wind & Fire|soul,Parliament|soul,Donna Summer|disco,Chic|disco,Gloria Gaynor|disco,Bob Marley|reggae,Jimmy Cliff|reggae,Dolly Parton|country,Willie Nelson|country,Waylon Jennings|country,Neil Young|folk,James Taylor|folk,Carole King|folk,The Clash|punk,Ramones|punk,Sex Pistols|punk,Talking Heads|alt,Kraftwerk|electronic,Fela Kuti|world,The Sugarhill Gang|hiphop',
+'1980s': 'Michael Jackson|pop,Prince|pop,Madonna|pop,Whitney Houston|pop,George Michael|pop,Cyndi Lauper|pop,Phil Collins|pop,Eurythmics|pop,a-ha|pop,Tears for Fears|pop,Duran Duran|pop,U2|rock,Bruce Springsteen|rock,Dire Straits|rock,The Police|rock,Guns N\' Roses|rock,Bon Jovi|rock,Van Halen|rock,Def Leppard|rock,Journey|rock,Metallica|metal,Iron Maiden|metal,Slayer|metal,Megadeth|metal,Mötley Crüe|metal,Ozzy Osbourne|metal,Run-DMC|hiphop,Public Enemy|hiphop,Beastie Boys|hiphop,N.W.A|hiphop,LL Cool J|hiphop,Eric B. & Rakim|hiphop,Depeche Mode|electronic,New Order|electronic,Pet Shop Boys|electronic,The Cure|alt,The Smiths|alt,R.E.M.|alt,Pixies|alt,Joy Division|alt,Tina Turner|soul,Lionel Richie|soul,Sade|soul,Luther Vandross|rnb,Janet Jackson|rnb,George Strait|country,Randy Travis|country,Kenny Rogers|country,Paul Simon|folk,Tracy Chapman|folk',
+'1990s': 'Nirvana|rock,Pearl Jam|rock,Soundgarden|rock,Alice in Chains|rock,Red Hot Chili Peppers|rock,Foo Fighters|rock,Green Day|punk,The Offspring|punk,Blink-182|punk,Radiohead|alt,Oasis|alt,Blur|alt,Pulp|alt,The Smashing Pumpkins|alt,Weezer|alt,Beck|alt,Metallica|metal,Pantera|metal,Rage Against the Machine|metal,Tool|metal,Korn|metal,Nine Inch Nails|metal,Marilyn Manson|metal,2Pac|hiphop,The Notorious B.I.G.|hiphop,Dr. Dre|hiphop,Snoop Dogg|hiphop,Nas|hiphop,Wu-Tang Clan|hiphop,A Tribe Called Quest|hiphop,OutKast|hiphop,Jay-Z|hiphop,Mariah Carey|rnb,TLC|rnb,Boyz II Men|rnb,Lauryn Hill|rnb,Destiny\'s Child|rnb,Whitney Houston|pop,Céline Dion|pop,Britney Spears|pop,Backstreet Boys|pop,Spice Girls|pop,Alanis Morissette|pop,Madonna|pop,Daft Punk|electronic,The Prodigy|electronic,The Chemical Brothers|electronic,Massive Attack|electronic,Fatboy Slim|electronic,Garth Brooks|country,Shania Twain|country,Alan Jackson|country,Shakira|latin,Ricky Martin|latin,Selena|latin,Jeff Buckley|folk,Sheryl Crow|folk',
+'2000s': 'Linkin Park|rock,Foo Fighters|rock,Red Hot Chili Peppers|rock,Nickelback|rock,Creed|rock,Three Days Grace|rock,The White Stripes|alt,The Strokes|alt,The Killers|alt,Arctic Monkeys|alt,Coldplay|alt,Muse|alt,Kings of Leon|alt,Franz Ferdinand|alt,Modest Mouse|alt,Arcade Fire|alt,System of a Down|metal,Slipknot|metal,Avenged Sevenfold|metal,Disturbed|metal,Evanescence|metal,Rammstein|metal,Green Day|punk,My Chemical Romance|punk,Blink-182|punk,Fall Out Boy|punk,Paramore|punk,Sum 41|punk,Eminem|hiphop,50 Cent|hiphop,Kanye West|hiphop,Jay-Z|hiphop,OutKast|hiphop,Lil Wayne|hiphop,Nelly|hiphop,T.I.|hiphop,Missy Elliott|hiphop,Beyoncé|rnb,Usher|rnb,Alicia Keys|rnb,Rihanna|rnb,Ne-Yo|rnb,Amy Winehouse|soul,Britney Spears|pop,Justin Timberlake|pop,Lady Gaga|pop,Kelly Clarkson|pop,Avril Lavigne|pop,Black Eyed Peas|pop,Nelly Furtado|pop,Daft Punk|electronic,Gorillaz|electronic,Taylor Swift|country,Carrie Underwood|country,Keith Urban|country,Shakira|latin,Daddy Yankee|latin,Jack Johnson|folk,Norah Jones|jazz',
+'2010s': 'Imagine Dragons|rock,Foo Fighters|rock,Arctic Monkeys|alt,The Black Keys|alt,Tame Impala|alt,The 1975|alt,Twenty One Pilots|alt,Florence + The Machine|alt,Lana Del Rey|alt,Bring Me the Horizon|metal,Ghost|metal,Gojira|metal,Slipknot|metal,Avenged Sevenfold|metal,Five Finger Death Punch|metal,Kendrick Lamar|hiphop,Drake|hiphop,Kanye West|hiphop,J. Cole|hiphop,Travis Scott|hiphop,Post Malone|hiphop,Nicki Minaj|hiphop,Childish Gambino|hiphop,Eminem|hiphop,Tyler, The Creator|hiphop,The Weeknd|rnb,Frank Ocean|rnb,SZA|rnb,Beyoncé|rnb,Bruno Mars|pop,Taylor Swift|pop,Adele|pop,Ed Sheeran|pop,Ariana Grande|pop,Billie Eilish|pop,Lorde|pop,Lady Gaga|pop,Dua Lipa|pop,Katy Perry|pop,Rihanna|pop,Sia|pop,Calvin Harris|electronic,Avicii|electronic,Skrillex|electronic,Daft Punk|electronic,Disclosure|electronic,Luke Combs|country,Chris Stapleton|country,Kacey Musgraves|country,Florida Georgia Line|country,Bad Bunny|latin,J Balvin|latin,Daddy Yankee|latin,BTS|kpop,BLACKPINK|kpop,Hozier|folk,Mumford & Sons|folk,Bon Iver|folk,Paramore|punk',
+'2020s': 'Olivia Rodrigo|pop,Sabrina Carpenter|pop,Taylor Swift|pop,Harry Styles|pop,Billie Eilish|pop,Dua Lipa|pop,Chappell Roan|pop,Benson Boone|pop,Charli xcx|pop,Gracie Abrams|pop,Kendrick Lamar|hiphop,Drake|hiphop,Travis Scott|hiphop,Doja Cat|hiphop,Lil Baby|hiphop,21 Savage|hiphop,Tyler, The Creator|hiphop,Central Cee|hiphop,SZA|rnb,The Weeknd|rnb,Brent Faiyaz|rnb,Giveon|rnb,Bad Bunny|latin,Karol G|latin,Peso Pluma|latin,Rauw Alejandro|latin,Morgan Wallen|country,Zach Bryan|country,Luke Combs|country,Lainey Wilson|country,BTS|kpop,NewJeans|kpop,Stray Kids|kpop,Fred again..|electronic,Peggy Gou|electronic,Fontaines D.C.|alt,Wet Leg|alt,boygenius|alt,Mitski|alt,Phoebe Bridgers|alt,Måneskin|rock,Greta Van Fleet|rock,Sleep Token|metal,Spiritbox|metal,Lorna Shore|metal,Hozier|folk,Noah Kahan|folk,Tems|afro,Burna Boy|afro,Rema|afro'
+};
+/* Consensus all-time artists: in rotation for everyone. */
+const CANON='The Beatles|rock,The Rolling Stones|rock,Led Zeppelin|rock,Pink Floyd|rock,Queen|rock,David Bowie|rock,Jimi Hendrix|rock,The Who|rock,Fleetwood Mac|rock,Eagles|rock,Bruce Springsteen|rock,U2|rock,Nirvana|rock,Pearl Jam|rock,Red Hot Chili Peppers|rock,Guns N\' Roses|rock,Elvis Presley|rock,Chuck Berry|rock,AC/DC|metal,Metallica|metal,Black Sabbath|metal,Iron Maiden|metal,Radiohead|alt,Oasis|alt,The Cure|alt,The Smiths|alt,Coldplay|alt,Arctic Monkeys|alt,The Clash|punk,Ramones|punk,Green Day|punk,Bob Dylan|folk,Simon & Garfunkel|folk,Leonard Cohen|folk,Joni Mitchell|folk,Neil Young|folk,Michael Jackson|pop,Prince|pop,Madonna|pop,Elton John|pop,ABBA|pop,Bee Gees|pop,Whitney Houston|pop,Mariah Carey|pop,Céline Dion|pop,Britney Spears|pop,Lady Gaga|pop,Taylor Swift|pop,Adele|pop,Billie Eilish|pop,The Beach Boys|pop,Frank Sinatra|pop,Stevie Wonder|soul,Marvin Gaye|soul,Aretha Franklin|soul,James Brown|soul,Otis Redding|soul,Amy Winehouse|soul,Beyoncé|rnb,Rihanna|rnb,The Weeknd|rnb,Lauryn Hill|rnb,Eminem|hiphop,2Pac|hiphop,The Notorious B.I.G.|hiphop,Jay-Z|hiphop,Kanye West|hiphop,Kendrick Lamar|hiphop,Dr. Dre|hiphop,OutKast|hiphop,Drake|hiphop,Daft Punk|electronic,Depeche Mode|electronic,Kraftwerk|electronic,Bob Marley|reggae,Johnny Cash|country,Dolly Parton|country,Nina Simone|jazz,Miles Davis|jazz,Shakira|latin,Bad Bunny|latin,BTS|kpop';
+const DECADES=['50s','60s','70s','80s','90s','2000s','2010s','2020s'];
+const DKEY={'50s':'1950s','60s':'1960s','70s':'1970s','80s':'1980s','90s':'1990s','2000s':'2000s','2010s':'2010s','2020s':'2020s'};
+const GENRES=[['rock','Rock'],['hardrock','Hard rock & metal'],['alt','Alternative & indie'],['punk','Punk & emo'],['pop','Pop'],['electronic','Dance & electronic'],['hiphop','Hip‑hop'],['rnb','R&B & soul'],['country','Country'],['latin','Latin'],['reggae','Reggae'],['folk','Folk & singer‑songwriter'],['jazz','Jazz & blues'],['world','Global & Afrobeats']];
+const GLABEL=Object.fromEntries(GENRES); GLABEL.ohw='One‑hit wonders';
+const TAG2G={rock:'rock',metal:'hardrock',alt:'alt',punk:'punk',pop:'pop',electronic:'electronic',disco:'electronic',hiphop:'hiphop',rnb:'rnb',soul:'rnb',country:'country',latin:'latin',reggae:'reggae',folk:'folk',blues:'jazz',kpop:'pop',jazz:'jazz',world:'world',afro:'world',other:null};
+const G=tag=>TAG2G[tag]===undefined?null:TAG2G[tag];
+/* Era × genre cells: one playlist query each. Missing combos don't exist as scenes. */
+const CELLQ={};
+(function(){ const put=(d,g,q)=>{ CELLQ[d+'|'+g]=q; };
+  const all=(g,f)=>DECADES.forEach(d=>{ const q=f(d); if(q) put(d,g,q); });
+  all('rock',d=>d==='50s'?'50s rock and roll hits':d+' rock');
+  all('hardrock',d=>({ '70s':'70s hard rock heavy metal','80s':'80s hard rock','90s':'90s hard rock metal','2000s':'2000s metal rock','2010s':'2010s metal','2020s':'2020s metal' })[d]);
+  all('alt',d=>({ '80s':'80s alternative new wave','90s':'90s alternative rock','2000s':'2000s indie rock','2010s':'2010s indie rock','2020s':'2020s indie' })[d]);
+  all('punk',d=>({ '70s':'70s punk','80s':'80s punk hardcore','90s':'90s punk rock','2000s':'2000s pop punk','2010s':'2010s pop punk emo' })[d]);
+  all('pop',d=>d+' pop hits');
+  all('electronic',d=>({ '70s':'70s disco','80s':'80s synth pop new wave','90s':'90s dance hits','2000s':'2000s dance hits','2010s':'2010s edm','2020s':'2020s dance hits' })[d]);
+  all('hiphop',d=>({ '80s':'80s hip hop','90s':'90s hip hop','2000s':'2000s hip hop','2010s':'2010s rap','2020s':'2020s rap' })[d]);
+  all('rnb',d=>({ '50s':'50s doo wop rhythm and blues','60s':'60s soul','70s':'70s soul funk','80s':'80s r&b','90s':'90s r&b','2000s':'2000s r&b','2010s':'2010s r&b','2020s':'2020s r&b' })[d]);
+  all('country',d=>d+' country hits');
+  all('latin',d=>({ '70s':'70s latin hits','80s':'80s latin pop','90s':'90s latin pop','2000s':'2000s reggaeton latin pop','2010s':'2010s latin hits','2020s':'2020s latin hits' })[d]);
+  all('reggae',d=>({ '60s':'60s ska rocksteady','70s':'70s reggae','80s':'80s reggae','90s':'90s reggae dancehall','2000s':'2000s dancehall reggae','2010s':'2010s reggae' })[d]);
+  all('folk',d=>({ '60s':'60s folk rock','70s':'70s singer songwriter','90s':'90s folk rock','2000s':'2000s acoustic singer songwriter','2010s':'2010s folk indie','2020s':'2020s folk' })[d]);
+  all('jazz',d=>({ '50s':'50s jazz classics','60s':'60s jazz','70s':'70s jazz funk','80s':'80s jazz','90s':'90s acid jazz','2000s':'2000s jazz','2010s':'2010s jazz','2020s':'2020s jazz' })[d]);
+  all('world',d=>({ '60s':'60s african music','70s':'70s afrobeat highlife','80s':'80s african music','90s':'90s world music','2000s':'2000s afrobeat','2010s':'2010s afrobeats','2020s':'2020s afrobeats amapiano' })[d]);
+  all('ohw',d=>({ '60s':'60s one hit wonders','70s':'70s one hit wonders','80s':'80s one hit wonders','90s':'90s one hit wonders','2000s':'2000s one hit wonders','2010s':'2010s one hit wonders' })[d]);
+})();
+const DECWORDS={'50s':['50s',"50's",'1950','fifties'],'60s':['60s',"60's",'1960','sixties'],'70s':['70s',"70's",'1970','seventies'],'80s':['80s',"80's",'1980','eighties'],'90s':['90s',"90's",'1990','nineties'],'2000s':['2000','00s',"00's",'noughties'],'2010s':['2010','10s',"10's"],'2020s':['2020','20s',"20's"]};
+const GENWORDS={rock:['rock'],hardrock:['hard rock','metal','glam','heavy'],alt:['alternative','indie','grunge','britpop','new wave'],punk:['punk','emo'],pop:['pop','hits','party'],electronic:['dance','edm','electro','disco','synth','house','techno'],hiphop:['hip hop','hip-hop','rap'],rnb:['r&b','rnb','soul','funk','doo wop','motown'],country:['country'],latin:['latin','reggaeton','latino','salsa'],reggae:['reggae','ska','dancehall'],folk:['folk','singer','acoustic'],jazz:['jazz','blues','bebop','swing'],world:['afro','african','world','amapiano','highlife','global'],ohw:['one hit','one-hit']};
+const TAGOF={}; (function(){ const addAll=str=>str.split(',').forEach(it=>{ const [n,t]=it.split('|'); if(n&&t&&!TAGOF[n.toLowerCase()]) TAGOF[n.toLowerCase()]=t; }); addAll(CANON); Object.values(SEEDS).forEach(addAll); })();
+const tagGuess=name=>TAGOF[String(name).toLowerCase()]||'other';
+
+/* ---------- Deezer API: fetch with JSONP fallback, rate-limited, cached ---------- */
+const API='https://api.deezer.com/';
+const cache=new Map(); let useJsonp=false, cbN=0;
+function jsonp(url){ return new Promise((res,rej)=>{ const name='__dz'+(cbN++); const s=document.createElement('script');
+  const done=(fn,v)=>{ delete window[name]; s.remove(); clearTimeout(t); fn(v); };
+  window[name]=d=>done(res,d); s.onerror=()=>done(rej,new Error('network'));
+  const t=setTimeout(()=>done(rej,new Error('timeout')),15000);
+  s.src=url+(url.includes('?')?'&':'?')+'output=jsonp&callback='+name; document.head.appendChild(s); }); }
+async function getJson(url){ let direct=null;
+  if(!useJsonp){ try{ const r=await fetch(url); if(r.ok) return await r.json(); direct='http '+r.status; }catch(e){ direct=(e&&e.message)||'blocked'; useJsonp=true; } }
+  try{ return await jsonp(url); }
+  catch(e){ let where=''; try{ where=' · page is '+(location.protocol||'?')+(window.top!==window?' embedded':' top-level'); }catch(x){} throw new Error((e&&e.message||'failed')+(direct?' (direct: '+direct+')':'')+where); }
+}
+const q=[]; let active=0, last=0, pumping=false; const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function enqueue(fn,prio){ return new Promise((res,rej)=>{ const job={fn,res,rej}; if(prio) q.unshift(job); else q.push(job); pump(); }); }
+async function pump(){ if(pumping) return; pumping=true;
+  while(q.length){ while(active>=4) await sleep(25); const job=q.shift(); const gap=last+105-Date.now(); if(gap>0) await sleep(gap); last=Date.now(); active++; job.fn().then(job.res,job.rej).finally(()=>{active--;}); }
+  pumping=false; }
+function api(path,prio){ const url=API+path; if(cache.has(url)) return cache.get(url);
+  const p=(async()=>{ for(let tries=0;;tries++){ const d=await enqueue(()=>getJson(url),prio);
+    if(d&&d.error){ if(tries<2 && /quota|limit/i.test(d.error.message||'')) { await sleep(1500); continue; } throw new Error(d.error.message||'API error'); }
+    return d; } })().catch(e=>{ cache.delete(url); throw e; });
+  cache.set(url,p); return p; }
+const findArtist=name=>api('search/artist?q='+encodeURIComponent(name)+'&limit=5').then(d=>{ const L=d.data||[]; if(!L.length) return null; const n=String(name).toLowerCase().replace(/^the /,''); const exact=L.filter(a=>String(a.name).toLowerCase().replace(/^the /,'')===n); const pick=(exact.length?exact:L).slice().sort((x,y)=>(y.nb_fan||0)-(x.nb_fan||0))[0]; return exact.length?pick:L[0]; });
+const findArtists=name=>api('search/artist?q='+encodeURIComponent(name)+'&limit=5',true).then(d=>d.data||[]);
+const artistTop=(id,limit,prio)=>api('artist/'+id+'/top?limit='+limit,prio).then(d=>d.data||[]);
+const artistRelated=(id,limit)=>api('artist/'+id+'/related?limit='+limit,true).then(d=>d.data||[]);
+const artistRadio=(id,limit)=>api('artist/'+id+'/radio?limit='+limit,true).then(d=>d.data||[]).catch(()=>[]);
+const searchTracks=term=>api('search?q='+encodeURIComponent(term)+'&limit=15',true).then(d=>d.data||[]);
+const ping=()=>api('genre');
+
+/* ---------- State ---------- */
+const KEY='song-arena-v8'; let S;
+function fresh(){ return {v:8, step:'setup', sim:[], resp:[], shownAt:{}, TM:null, W0:{}, decades:[], wall:null, wall2:null, wallPage:1, pics:{}, picks:[], tracks:{}, loves:[], seen:{}, art:{}, canonQ:[], cells:{}, W:{}, exp:{}, tcell:{}, screen:[], screenNo:0, lastLoves:0, weak:0, mode:null, target:10, audited:false, checkArt:null, checkScreen:[], r:{}, g:{}, w:{}, hist:[], stable:0, lastTop:null, manual:null, tick:0}; }
+function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); return s&&s.v===8?s:null; }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+S=load()||fresh();
+const T=id=>S.tracks[id]; const loved=id=>S.loves.includes(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let undoStack=[]; function snapshot(){ undoStack.push(JSON.stringify(S)); if(undoStack.length>40) undoStack.shift(); }
+function undo(){ if(!undoStack.length){ toast('Nothing to undo'); return; } S=JSON.parse(undoStack.pop()); save(); render(); }
+function toast(m){ const el=document.getElementById('toast'); el.textContent=m; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),1800); }
+let errorNote=null, poolBusy=0, canonBusy=false;
+let renderTimer=null; function scheduleRender(){ if(renderTimer) return; renderTimer=setTimeout(()=>{ renderTimer=null; render(); },300); }
+
+/* ---------- Catalog helpers ---------- */
+const BAD=/\b(live (at|from|in|on|version|recording|session)|karaoke|instrumental|remix|sped up|slowed)\b|[\(\[\-–]\s*(live|cover)\b/i;
+const cleanTitle=s=>String(s).replace(/\s*[\(\[][^\)\]]*(remaster|version|edit|mix|mono|stereo|anniversary|deluxe|bonus)[^\)\]]*[\)\]]/ig,'').replace(/\s*-\s*[^-]*(remaster|version|edit|mix|mono|stereo|anniversary|deluxe|bonus)[^-]*$/i,'').trim();
+const normT=s=>cleanTitle(s).toLowerCase().replace(/\(.*?\)|\[.*?\]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+function addTrack(t,src){ if(!t||!t.id||!t.artist||!t.artist.id) return null; const raw=t.title_short||t.title||''; if(src!=='search' && BAD.test(raw)) return null;
+  if(S.tracks[t.id]) return S.tracks[t.id];
+  const nt=normT(raw); for(const k in S.tracks){ const o=S.tracks[k]; if(o.aid===t.artist.id && normT(o.t)===nt) return o; }
+  const rec={id:t.id, t:cleanTitle(raw)||raw, a:t.artist.name, aid:t.artist.id, c:(t.album&&(t.album.cover_medium||t.album.cover))||'', p:t.preview||''};
+  S.tracks[t.id]=rec; return rec; }
+function syncLoves(){ const c={}; for(const id of S.loves){ const t=T(id); if(t) c[t.aid]=(c[t.aid]||0)+1; } for(const k in S.art) S.art[k].loves=c[k]||0; }
+function artRec(id,name,extra){ if(!S.art[id]) S.art[id]={id,name,tag:'other',g:null,src:'pool',ord:9999,pic:'',loves:0,shown:0,passes:0,depth:0,rel:false,via:0,pos:{},lastLove:0,ready:false,named:false,poolSongs:{}};
+  const a=S.art[id]; if(name&&!a.name) a.name=name; if(extra) Object.assign(a,extra); return a; }
+async function ingestArtist(aid,name,limit,prio,extra){ const a=artRec(aid,name,extra); if(a.depth>=limit){ a.ready=true; return a; }
+  const tracks=await artistTop(aid,limit,prio); a.depth=limit;
+  tracks.forEach((t,i)=>{ const rec=addTrack(t,'top'); if(!rec) return; if(a.pos[rec.id]==null||a.pos[rec.id]>=50) a.pos[rec.id]=i; if(!a.pic&&t.artist&&t.artist.picture_medium) a.pic=t.artist.picture_medium; });
+  a.ready=true; save(); return a; }
+function bestTrack(a,minPos){ let best=null, bp=1e9; for(const id in a.pos){ const n=+id; if(loved(n)||S.seen[n]||S.screen.includes(n)||!T(n)) continue; const p=a.pos[id]; if(minPos!=null&&p<minPos) continue; if(p<bp){ bp=p; best=n; } } if(best==null&&minPos!=null) return bestTrack(a,null); return best; }
+const isOHW=a=>a.src==='pool'&&!a.named&&Object.keys(a.poolSongs||{}).length<2&&a.loves===0;
+
+/* ---------- The artist wall ---------- */
+function buildWall(){ const seen=new Set(); const canon=new Set(CANON.split(',').map(x=>x.split('|')[0].toLowerCase()));
+  const per=S.decades.length<=1?18:S.decades.length===2?12:S.decades.length===3?9:8; const wall=[];
+  for(const [di,d] of S.decades.entries()){ const byG={}; for(const it of SEEDS[DKEY[d]].split(',')){ const [n,t]=it.split('|'); const g=G(t); if(!g) continue; const k=n.toLowerCase(); if(seen.has(k)) continue; (byG[g]=byG[g]||[]).push({name:n,tag:t,g,dec:d,canon:canon.has(k),r:Math.random()}); }
+    Object.values(byG).forEach(l=>l.sort((x,y)=>(y.canon-x.canon)||(x.r-y.r))); let gs=GENRES.map(x=>x[0]).filter(g=>byG[g]); const rot=(di*5)%gs.length; gs=gs.slice(rot).concat(gs.slice(0,rot)); let n=0, round=0;
+    while(n<per&&round<6){ let any=false; for(const g of gs){ if(n>=per) break; const a=byG[g][round]; if(!a||seen.has(a.name.toLowerCase())) continue; seen.add(a.name.toLowerCase()); wall.push(a); n++; any=true; } if(!any) break; round++; } }
+  return wall; }
+function buildWall2(){ const shown=new Set(S.wall.map(a=>a.name.toLowerCase())); const picked=new Set(S.picks.map(p=>p.name.toLowerCase())); const lanes={};
+  S.picks.forEach(p=>{ const g=G(p.tag); if(g&&p.dec) lanes[p.dec+'|'+g]=(lanes[p.dec+'|'+g]||0)+1; });
+  const cands={}; Object.entries(lanes).forEach(([k,n])=>{ const [dec,g]=k.split('|'); const di=DECADES.indexOf(dec);
+    [[dec,2],[DECADES[di-1],1],[DECADES[di+1],1]].forEach(([d,w])=>{ if(!d) return; for(const it of SEEDS[DKEY[d]].split(',')){ const [name,tag]=it.split('|'); if(G(tag)!==g) continue; const key=name.toLowerCase(); if(shown.has(key)||picked.has(key)) continue;
+      const sc=n*w*(S.decades.includes(d)?1.5:1)+Math.random()*0.5; if(!cands[key]||cands[key].sc<sc) cands[key]={name,tag,g,dec:d,sc}; } }); });
+  return Object.values(cands).sort((x,y)=>y.sc-x.sc).slice(0,24); }
+async function addRelatedToWall2(){ if(!S.wall2) return; const have=new Set([...S.wall,...S.wall2].map(a=>a.name.toLowerCase()).concat(S.picks.map(p=>p.name.toLowerCase())));
+  for(const p of S.picks.slice(0,8)){ if(!p.id||p.id<0||p.relDone) continue; p.relDone=true; try{ const rel=await artistRelated(p.id,4); let added=0;
+      for(const r of rel){ const key=r.name.toLowerCase(); if(have.has(key)||added>=2||S.wall2.length>=30) continue; have.add(key); added++; S.wall2.push({name:r.name,tag:p.tag,g:G(p.tag),dec:p.dec,id:r.id,pic:r.picture_medium||''}); if(r.picture_medium) S.pics[key]=r.picture_medium; }
+    }catch(e){} }
+  save(); if(S.step==='wall'&&S.wallPage===2) scheduleRender(); }
+let picsBusy=false;
+async function resolvePics(){ if(picsBusy) return; picsBusy=true;
+  try{ const names=[...(S.wall||[]),...(S.wall2||[])].map(a=>a.name).filter(n=>S.pics[n.toLowerCase()]==null); let i=0;
+    await Promise.all(Array.from({length:3},async()=>{ while(i<names.length){ const n=names[i++]; try{ const a=await findArtist(n); S.pics[n.toLowerCase()]=(a&&a.picture_medium)||''; if(a&&a.picture_medium) patchPic(n,a.picture_medium); }catch(e){ S.pics[n.toLowerCase()]=''; } } })); save(); }
+  finally{ picsBusy=false; } }
+function cellsForDecades(ds){ const out=[]; ds.forEach(d=>{ GENRES.forEach(([g])=>{ if(CELLQ[d+'|'+g]) out.push(d+'|'+g); }); if(CELLQ[d+'|ohw']) out.push(d+'|ohw'); }); return out; }
+function initWeights(){ S.W={}; cellsForDecades(S.decades).forEach(k=>{ S.W[k]=k.endsWith('|ohw')?0.3:0.35; }); S.W0={};
+  for(const p of S.picks){ const g=G(p.tag); if(!g) continue; const inDec=p.dec?[p.dec]:S.decades.filter(d=>SEEDS[DKEY[d]].toLowerCase().includes(p.name.toLowerCase()+'|'));
+    (inDec.length?inDec:S.decades).forEach(d=>{ const k=d+'|'+g; if(CELLQ[k]) S.W[k]=(S.W[k]||0.35)+(inDec.length?1:0.5); }); } S.W0={...S.W}; }
+const weight=k=>S.W[k]??0.3; const bumpW=(k,d)=>{ S.W[k]=Math.max(0.1,(S.W[k]??0.3)+d); };
+function refreshWeights(){ if(!S.TM) return; Object.keys(S.cells).forEach(k=>{ if(k.endsWith('|ohw')) return; S.W[k]=Math.max(0.1,(S.W0[k]??0.35)*0.5+2.5*cellP(k)); }); }
+function spillLane(g){ if(!g) return; DECADES.forEach(d=>{ const k=d+'|'+g; if(!CELLQ[k]) return; if(!S.cells[k]) S.cells[k]={status:'idle',songs:[],lists:[]}; S.W[k]=Math.min(1.1,Math.max(S.W[k]??0,(S.W[k]??0.35)+0.4)); S.W0[k]=Math.max(S.W0[k]??0.35,0.75); }); }
+const laneLoved=g=>!!g&&(gLoves()[g]||0)>=1;
+/* ---------- Taste model for discovery: every card shown is data, love or pass, recent screens weigh more ---------- */
+const TK=['c','g','d','a','s','t'];
+function tf(id){ const t=T(id); const a=t&&S.art[t.aid]; const cell=S.tcell[id]; const [dec,gen]=cell?cell.split('|'):[null,null]; const g=(a&&(a.g||G(a.tag)))||(gen&&gen!=='ohw'?gen:null)||null; const pos=a?a.pos[id]:null; const tier=pos==null?'unk':pos<=1?'hit':pos<50?'deep':pos===50?'chart':'search'; return {c:cell||null,g,d:dec||null,a:t?String(t.aid):null,s:a?a.src:null,t:tier}; }
+function tlin(f,P){ let z=P.b; for(const k of TK){ const x=f[k]; if(x!=null&&P[k][x]!=null) z+=P[k][x]; } return z; }
+function tasteFit(){ const rows=[]; const now=S.screenNo; const sigm=x=>1/(1+Math.exp(-x));
+  for(const r of S.resp){ if(!T(r.id)) continue; rows.push({f:tf(r.id), y:loved(r.id)?1:0, w:Math.max(0.15,Math.pow(0.7,now-r.scr))}); }
+  const m=S.M; for(const h of S.hist){ if(!h[2]||!T(h[0])||!T(h[1])) continue; const w=h[2], l=h[2]===h[0]?h[1]:h[0]; const p=(m&&m.th)?sigm((m.th[w]??0)-(m.th[l]??0)):0.5; const wt=0.1+0.6*(1-p); rows.push({f:tf(w),y:1,w:wt}); rows.push({f:tf(l),y:0,w:wt}); }
+  const P={b:0,c:{},g:{},d:{},a:{},s:{},t:{}}; const LAM={c:1,g:1,d:1,a:2,s:1,t:1};
+  if(rows.length){ for(let it=0;it<150;it++){ let gb=0,hb=0.5; const gr={},hs={}; TK.forEach(k=>{gr[k]={};hs[k]={};});
+      for(const r of rows){ const p=sigm(tlin(r.f,P)); const e=r.w*(r.y-p), q=r.w*p*(1-p); gb+=e; hb+=q; for(const k of TK){ const x=r.f[k]; if(x==null) continue; gr[k][x]=(gr[k][x]||0)+e; hs[k][x]=(hs[k][x]||0)+q; } }
+      let maxd=0; const sb=(gb-0.5*P.b)/hb; P.b+=0.2*sb; maxd=Math.abs(sb);
+      for(const k of TK) for(const x in gr[k]){ const st=(gr[k][x]-LAM[k]*(P[k][x]||0))/(hs[k][x]+LAM[k]); P[k][x]=(P[k][x]||0)+0.2*st; maxd=Math.max(maxd,Math.abs(st)); }
+      if(maxd<2e-3) break; } }
+  S.TM=P; refreshWeights(); }
+function pLove(id){ const P=S.TM; if(!P) return 0.5; return 1/(1+Math.exp(-tlin(tf(id),P))); }
+function cellP(k){ const P=S.TM; if(!P) return 0.5; const [d,g]=k.split('|'); return 1/(1+Math.exp(-(P.b+(P.c[k]||0)+(P.g[g]||0)+(P.d[d]||0)+(P.s.pool||0)+(P.t.chart||0)))); }
+function tasteSummary(){ const P=S.TM; if(!P||S.screenNo<1) return null; const cells=Object.keys(S.cells).filter(k=>!k.endsWith('|ohw')).map(k=>({k,v:(P.c[k]||0)+(P.g[k.split('|')[1]]||0)+(P.d[k.split('|')[0]]||0)})).sort((x,y)=>y.v-x.v); if(!cells.length) return null; const up=cells.filter(c=>c.v>0.2).slice(0,2).map(c=>cellLabel(c.k)); const down=cells.filter(c=>c.v<-0.2).slice(-1).map(c=>cellLabel(c.k)); return {up,down}; }
+
+/* ---------- Pools: one era × genre cell from the playlists that agree with each other ---------- */
+function ensureCells(ds){ cellsForDecades(ds).forEach(k=>{ if(!S.cells[k]) S.cells[k]={status:'idle',songs:[],lists:[]}; }); }
+const decMatch=(t,d)=>DECWORDS[d].some(w=>t.includes(w)); const genMatch=(t,g)=>GENWORDS[g].some(w=>t.includes(w));
+async function loadCell(key){ const c=S.cells[key]; if(!c||c.status==='done'||c.status==='loading') return; c.status='loading'; poolBusy++;
+  try{ const [dec,gen]=key.split('|'); const res=await api('search/playlist?q='+encodeURIComponent(CELLQ[key])+'&limit=8'); const found=(res.data||[]).filter(p=>p.public!==false).slice(0,6);
+    const det=await Promise.all(found.map(async p=>{ try{ const d=await api('playlist/'+p.id); const tr=((d.tracks&&d.tracks.data)||[]).slice(0,80); return {id:p.id,title:d.title||p.title||'',fans:d.fans||0,creator:(d.creator&&d.creator.name)||(p.user&&p.user.name)||'',tracks:tr}; }catch(e){ return null; } }));
+    let cands=det.filter(x=>x&&x.tracks.length>=15);
+    cands.forEach(p=>{ const perA={}; p.keys=new Set(); p.tr=[]; p.tracks.forEach(t=>{ if(!t.artist||!t.artist.id) return; const ak=t.artist.id; perA[ak]=(perA[ak]||0)+1; if(perA[ak]>3) return; const k=normT(t.title_short||t.title||'')+'|'+ak; if(p.keys.has(k)) return; p.keys.add(k); p.tr.push({t,k}); }); });
+    cands.sort((x,y)=>y.fans-x.fans); const dup=new Set(); for(let i=0;i<cands.length;i++) for(let j=i+1;j<cands.length;j++){ if(dup.has(cands[j])) continue; let inter=0; cands[i].keys.forEach(k=>{ if(cands[j].keys.has(k)) inter++; }); const jac=inter/Math.max(1,cands[i].keys.size+cands[j].keys.size-inter); if(jac>=0.7) dup.add(cands[j]); } cands=cands.filter(c=>!dup.has(c));
+    cands.forEach(p=>{ let ov=0,n=0; cands.forEach(o=>{ if(o===p) return; let inter=0; p.keys.forEach(k=>{ if(o.keys.has(k)) inter++; }); ov+=inter/Math.max(1,Math.min(p.keys.size,o.keys.size)); n++; }); p.overlap=n?ov/n:0;
+      const ti=p.title.toLowerCase(); p.score=Math.log10(p.fans+10)+(decMatch(ti,dec)?2:0)+(genMatch(ti,gen)?1:0)+(/deezer/i.test(p.creator)?1.5:0)+3*p.overlap; });
+    cands.sort((x,y)=>y.score-x.score); const kept=cands.slice(0,3);
+    const cons={}; kept.forEach((p,li)=>p.tr.forEach((e,pos)=>{ const r=cons[e.k]||(cons[e.k]={t:e.t,n:0,best:1e9}); r.n++; r.best=Math.min(r.best,pos+li*6); }));
+    const rows=Object.values(cons).sort((a,b)=>(b.n-a.n)||(a.best-b.best)); const songs=[];
+    for(const r of rows){ if(r.n<2&&songs.length>=45) break; const rec=addTrack(r.t,'pool'); if(!rec) continue; if(songs.some(s=>s.id===rec.id)) continue; songs.push({id:rec.id,n:r.n});
+      const a=artRec(rec.aid,rec.a); a.poolSongs[rec.id]=1; if(a.g==null&&gen!=='ohw') a.g=gen; if(a.pos[rec.id]==null) a.pos[rec.id]=50; if(!S.tcell[rec.id]) S.tcell[rec.id]=key; if(songs.length>=70) break; }
+    c.songs=songs; c.lists=kept.map(p=>p.title); c.status=songs.length>=8?'done':'thin';
+  }catch(e){ c.status='fail'; c.err=e.message; errorNote=e.message; }
+  poolBusy--; save(); if(S.step==='discover'&&S.screen.length<SCREEN){ const b=S.screen.length; fillScreen(); if(S.screen.length!==b) patchScreen(b); } }
+let poolRunning=false;
+async function loadPools(){ if(poolRunning) return; poolRunning=true;
+  try{ for(let guard=0;guard<200;guard++){ const idle=Object.keys(S.cells).filter(k=>S.cells[k].status==='idle'); if(!idle.length) break;
+      idle.sort((x,y)=>weight(y)-weight(x)); const batch=idle.slice(0,2); await Promise.all(batch.map(loadCell)); } }
+  finally{ poolRunning=false; if(S.step==='discover'&&S.screen.length<SCREEN){ fillScreen(); scheduleRender(); } } }
+const poolsLoaded=()=>Object.values(S.cells).filter(c=>c.status==='done').length; const poolsTotal=()=>Object.keys(S.cells).length;
+
+/* ---------- Canon and named artists resolve in the background ---------- */
+function queueCanon(){ if(S.canonQ.length) return; S.canonQ=CANON.split(',').map((it,i)=>{ const [name,tag]=it.split('|'); return {name,tag,ord:i,done:false}; }).sort(()=>Math.random()-.5); }
+async function resolveNamed(){ for(const p of S.picks){ if(p.id&&S.art[p.id]&&S.art[p.id].named) continue; if(p.id===-1) continue; try{ let id=p.id, nm=p.name; if(!id){ const a=await findArtist(p.name); if(!a){ p.id=-1; continue; } id=a.id; nm=a.name; p.id=id; if(a.picture_medium) S.pics[p.name.toLowerCase()]=a.picture_medium; } await ingestArtist(id,nm,5,true,{named:true,tag:p.tag,g:G(p.tag),src:'named',ord:0}); }catch(e){ errorNote=e.message; } } save(); }
+async function ensureCanon(){ if(canonBusy) return; canonBusy=true;
+  try{ let guard=0; while(guard++<30){ const fresh=Object.values(S.art).filter(a=>a.src==='canon'&&a.ready&&a.shown===0&&a.loves===0).length; if(fresh>=6) break;
+      const batch=S.canonQ.filter(e=>!e.done).slice(0,4); if(!batch.length) break;
+      await Promise.all(batch.map(async e=>{ try{ const a=await findArtist(e.name); if(a){ const ex=S.art[a.id]; if(!ex||ex.src==='pool'){ await ingestArtist(a.id,a.name,5,false,{src:'canon',tag:e.tag,g:G(e.tag),ord:e.ord}); } } }catch(x){ errorNote=x.message; } e.done=true; })); save(); } }
+  finally{ canonBusy=false; if(S.step==='discover'&&S.screen.length<SCREEN){ fillScreen(); scheduleRender(); } } }
+
+/* ---------- Screen building: 12 cards, 12 different artists ---------- */
+const SCREEN=12;
+function gLoves(){ const m={}; for(const id of S.loves){ const t=T(id); const a=t&&S.art[t.aid]; const g=a&&(a.g||G(a.tag)); if(g) m[g]=(m[g]||0)+1; } return m; }
+function fillScreen(){ syncLoves();
+  const usedA=new Set(S.screen.map(id=>T(id)&&T(id).aid)); const comp=S.comp||(S.comp={});
+  const laneOf=id=>{ const t=T(id); const a=t&&S.art[t.aid]; const k=S.tcell[id]; return (a&&(a.g||G(a.tag)))||(k?k.split('|')[1]:null)||null; }; const laneN={}; S.screen.forEach(id=>{ const l=laneOf(id); if(l) laneN[l]=(laneN[l]||0)+1; });
+  const push=(id,label)=>{ if(S.screen.length>=SCREEN) return false; const l=laneOf(id); if(l&&(laneN[l]||0)>=7) return false; if(l) laneN[l]=(laneN[l]||0)+1; S.screen.push(id); usedA.add(T(id).aid); comp[label]=(comp[label]||0)+1; const k=S.tcell[id]; if(k) S.exp[k]=(S.exp[k]||0)+1; return true; };
+  const left=(label,cap)=>Math.max(0,cap-(comp[label]||0)); const has=label=>Object.keys(comp).some(k=>k.startsWith(label));
+  const add=(a,label)=>{ if(S.screen.length>=SCREEN||usedA.has(a.id)) return false; const t=bestTrack(a); if(t==null) return false; push(t,label); return true; };
+  const take=(list,n,label)=>{ for(const a of list){ if(n<=0) break; if(add(a,label)) n--; } };
+  if(S.mode&&S.mode.startsWith('artist:')){ const a=S.art[+S.mode.slice(7)]; if(!a) return; Object.keys(a.pos).map(Number).filter(id=>T(id)&&!loved(id)&&!S.seen[id]&&!S.screen.includes(id)).sort((x,y)=>a.pos[x]-a.pos[y]).forEach(id=>{ if(S.screen.length<SCREEN) S.screen.push(id); }); return; }
+  const arts=Object.values(S.art); const weak=S.screenNo>0&&S.lastLoves<3; const gl=gLoves(); const keep=3; // at least this many breadth cards
+  const room=()=>Math.max(0,SCREEN-keep-S.screen.length);
+  const addDeep=(a,label,minPos)=>{ if(S.screen.length>=SCREEN||usedA.has(a.id)) return false; const t=bestTrack(a,minPos); if(t==null) return false; push(t,label); return true; };
+  // 0. artists you tapped on the wall: their hit first, then deeper cuts
+  { let n=Math.min(room(),left('your artists',weak?2:3)); for(const a of arts.filter(a=>a.named&&a.ready&&a.passes<3&&a.loves<6).sort((x,y)=>(y.loves-x.loves)||(x.shown-y.shown)||(x.ord-y.ord))){ if(n<=0) break; if(addDeep(a,'your artists',a.shown>=1?2:null)) n--; } }
+  // 1. a love earns one more: a deeper cut if the loved song was the hit
+  { let n=Math.min(room(),left('one more from an artist you loved',weak?2:3)); for(const a of arts.filter(a=>!a.named&&a.ready&&!isOHW(a)&&a.loves>=1&&a.loves<6&&a.passes<=a.loves+1).sort((x,y)=>y.lastLove-x.lastLove)){ if(n<=0) break; const minP=a.fan?4:2; if(addDeep(a,'one more from an artist you loved',minP)) n--; } }
+  // 2. similar songs, from the artist radio of what you loved
+  { let n=Math.min(room(),left('similar to',weak?1:2)); const fromLabel=x=>{ const f=T(x.from); return 'similar to '+(f?f.t:'what you loved'); }; const simC=S.sim.filter(x=>{ const t=T(x.id); return t&&!loved(x.id)&&!S.seen[x.id]&&!S.screen.includes(x.id); }).map((x,i)=>({x,v:pLove(x.id)+0.004*i})).sort((p,q)=>q.v-p.v); for(const {x} of simC){ if(n<=0) break; const t=T(x.id); if(usedA.has(t.aid)) continue; push(x.id,fromLabel(x)); n--; } }
+  // 3. related artists
+  { let n=Math.min(room(),left('similar artists',weak?1:2)); for(const a of arts.filter(a=>a.src==='related'&&a.ready&&a.shown===0).sort((x,y)=>y.via-x.via)){ if(n<=0) break; if(add(a,'similar artists')) n--; } }
+  // 4. second chances: passed once, but supported by something else you did → a deeper cut
+  { let n=Math.min(room(),left('second chance',2)); for(const a of arts.filter(a=>a.ready&&a.loves===0&&a.passes===1&&!a.secondChance&&(a.named||laneLoved(a.g||G(a.tag))||a.src==='related'||a.src==='radio')).sort((x,y)=>pLove(bestTrack(y,2)??bestTrack(y))-pLove(bestTrack(x,2)??bestTrack(x)))){ if(n<=0) break; if(a.depth<10&&!a.deepReq){ a.deepReq=true; ingestArtist(a.id,a.name,10,false).catch(()=>{}); } if(addDeep(a,'second chance',2)){ a.secondChance=true; n--; } } }
+  // 5. one-hit wonder of your era
+  const ohwCells=Object.keys(S.cells).filter(k=>k.endsWith('|ohw')&&S.cells[k].status==='done'); if(ohwCells.length&&!has('one-hit wonder')&&room()>0){ const k=pickCell(ohwCells); const id=cellPick(k,usedA); if(id!=null) push(id,'one-hit wonder'); }
+  // 5b. the canon: all-time names, leaning to genres you love
+  take(arts.filter(a=>a.src==='canon'&&a.ready&&a.shown===0&&a.loves===0).sort((x,y)=>((pLove(bestTrack(y)??0)-pLove(bestTrack(x)??0))||((gl[y.g]||0)-(gl[x.g]||0))||(x.ord-y.ord))), Math.min(room()+1,left('all‑time names',weak?2:1)), 'all‑time names');
+  // 6. exploration: cells you've seen least
+  const live=Object.keys(S.cells).filter(k=>!k.endsWith('|ohw')&&S.cells[k].status==='done'&&cellHasUnseen(k));
+  const hot=Object.keys(S.W).filter(k=>weight(k)>=1.2&&!k.endsWith('|ohw')); const stillLoading=poolRunning&&(live.length<3||hot.some(k=>S.cells[k]&&S.cells[k].status!=='done'));
+  const roomFor=stillLoading?SCREEN-4:SCREEN;
+  if(live.length){ const byExp=live.slice().sort((x,y)=>(S.exp[x]||0)-(S.exp[y]||0)); let n=(weak?3:1)-Object.keys(comp).filter(k=>k.startsWith('exploring')).length; for(const k of byExp){ if(n<=0||S.screen.length>=SCREEN) break; const id=cellPick(k,usedA); if(id!=null){ push(id,'exploring '+cellLabel(k)); n--; } }
+    // 7. the rest: weighted draw across the era × genre cells
+    const perCell={}; Object.entries(comp).forEach(([l,n])=>{ const k=live.find(c=>cellLabel(c)===l); if(k) perCell[k]=n; }); let guard=0;
+    const hot=live.filter(c=>weight(c)>=1); let hotSlots=hot.length?Math.ceil((roomFor-S.screen.length)/2):0;
+    while(S.screen.length<roomFor&&guard++<60){ const src=(hotSlots>0&&hot.some(c=>(perCell[c]||0)<3))?hot:live; const k=pickCell(src.filter(c=>(perCell[c]||0)<3)); if(!k) break; const id=cellPick(k,usedA); if(id==null){ perCell[k]=9; continue; } perCell[k]=(perCell[k]||0)+1; if(src===hot) hotSlots--; push(id,cellLabel(k)); } }
+  // 8. if the pools aren't here yet, lean on canon
+  if(S.screen.length<roomFor) take(arts.filter(a=>a.src==='canon'&&a.ready&&a.shown===0&&a.loves===0).sort((x,y)=>x.ord-y.ord), stillLoading?left('all‑time names',3):SCREEN, 'all‑time names');
+  if(!stillLoading&&S.screen.length<SCREEN) take(arts.filter(a=>a.src==='canon'&&a.ready&&a.shown===0&&a.loves===0).sort((x,y)=>x.ord-y.ord), SCREEN, 'all‑time names');
+}
+const cellLabel=k=>{ const [d,g]=k.split('|'); return d+' '+(GLABEL[g]||g).toLowerCase(); };
+function cellHasUnseen(k){ return S.cells[k].songs.some(s=>!loved(s.id)&&!S.seen[s.id]&&!S.screen.includes(s.id)); }
+function cellPick(k,usedA){ let best=null,bv=-1,n=0; for(const s of S.cells[k].songs){ const t=T(s.id); if(!t||loved(s.id)||S.seen[s.id]||S.screen.includes(s.id)||usedA.has(t.aid)) continue; const v=(s.n>=2?1:0.75)*(0.4+pLove(s.id))*(1-0.015*n); if(v>bv){ bv=v; best=s.id; } if(++n>=20) break; } return best; }
+function pickCell(keys){ if(!keys.length) return null; const tot=keys.reduce((s,k)=>s+weight(k),0); let r=Math.random()*tot; for(const k of keys){ r-=weight(k); if(r<=0) return k; } return keys[keys.length-1]; }
+function nextScreen(){ snapshot(); let lv=0;
+  for(const id of S.screen){ const a=S.art[T(id).aid]; if(a) a.shown++; const k=S.tcell[id]; if(S.shownAt[id]==null){ S.shownAt[id]=S.screenNo; S.resp.push({id,scr:S.screenNo}); } if(loved(id)) lv++; else { S.seen[id]=true; if(a) a.passes++; if(k) bumpW(k,-0.15); } }
+  S.lastLoves=lv; S.screenNo++; tasteFit(); if(S.mode){ S.mode=null; } else { S.weak=lv<3?S.weak+1:0; if(S.weak>=2) widenDecades(); }
+  loadPools();
+  S.screen=[]; S.comp={}; fillScreen(); save(); render(); loadPools(); ensureCanon(); window.scrollTo({top:0}); }
+function widenDecades(){ const idx=S.decades.map(d=>DECADES.indexOf(d)); const add=new Set(); idx.forEach(i=>{ [i-1,i+1].forEach(j=>{ if(j>=0&&j<DECADES.length&&!S.decades.includes(DECADES[j])) add.add(DECADES[j]); }); });
+  const ds=[...add]; if(!ds.length) return; ensureCells(ds); cellsForDecades(ds).forEach(k=>{ if(S.W[k]==null) S.W[k]=0.25; }); }
+
+/* ---------- What a love does ---------- */
+async function expandFrom(id){ const t=T(id); if(!t) return; const a=artRec(t.aid,t.a); syncLoves(); a.lastLove=++S.tick; const k=S.tcell[id]; if(k) bumpW(k,1.5); const g=a.g||G(a.tag); spillLane(g);
+  if(a.pos[id]!=null&&a.pos[id]>=4&&a.pos[id]<50) a.fan=true;
+  try{ if(!a.ready&&!isOHW(a)) await ingestArtist(a.id,a.name,5,true);
+    if(!isOHW(a)&&a.depth<10) await ingestArtist(a.id,a.name,10,true);
+    if(a.loves>=2&&a.depth<30) await ingestArtist(a.id,a.name,30,true);
+    if(!a.rel){ a.rel=true; const rel=await artistRelated(a.id,6);
+      await Promise.all(rel.slice(0,3).map(async r=>{ const ex=S.art[r.id]; if(ex&&ex.src!=='pool'&&ex.src!=='related'&&ex.src!=='radio') return; const ra=artRec(r.id,r.name,{src:'related',tag:a.tag,g,ord:a.ord,pic:r.picture_medium||''}); ra.via++; await ingestArtist(r.id,r.name,3,true); })); }
+    if(!a.radio){ a.radio=true; const rt=await artistRadio(a.id,25); let n=0; for(const tr of rt){ if(n>=10) break; if(!tr.artist||tr.artist.id===a.id) continue; const rec=addTrack(tr,'radio'); if(!rec||loved(rec.id)||S.seen[rec.id]) continue;
+        const ra=artRec(rec.aid,rec.a); if(ra.src==='pool'&&!ra.ready){ ra.src='radio'; } if(!ra.g) ra.g=g; if(ra.tag==='other'&&a.tag) ra.tag=a.tag; if(ra.pos[rec.id]==null) ra.pos[rec.id]=50; if(!S.tcell[rec.id]&&k) S.tcell[rec.id]=k;
+        if(!S.sim.some(x=>x.id===rec.id)){ S.sim.push({id:rec.id,from:id}); n++; } } }
+  }catch(e){ errorNote=e.message; } save(); if(S.step==='discover') loadPools(); }
+function toggleLove(id){ snapshot(); const i=S.loves.indexOf(id);
+  if(i>=0){ S.loves.splice(i,1); syncLoves(); const k=S.tcell[id]; if(k) bumpW(k,-1); }
+  else { S.loves.push(id); S.manual=null; if(S.shownAt[id]==null){ S.shownAt[id]=S.screenNo; S.resp.push({id,scr:S.screenNo}); } expandFrom(id); }
+  save(); patchLove(id); }
+async function moreFrom(aid){ const a=S.art[aid]; if(!a) return; S.mode='artist:'+aid; S.screen=[]; S.comp={}; render();
+  try{ if(a.depth<50) await ingestArtist(aid,a.name,50,true);
+    if(!a.albums){ a.albums=true; const al=(await api('artist/'+aid+'/albums?limit=50',true)).data||[]; const studio=al.filter(x=>x.record_type==='album').sort((x,y)=>(y.fans||0)-(x.fans||0)).slice(0,3);
+      await Promise.all(studio.map(async (alb,k)=>{ try{ const tr=(await api('album/'+alb.id+'/tracks?limit=30',true)).data||[]; tr.forEach((t,i)=>{ if(!t.artist) t.artist={id:aid,name:a.name}; if(!t.album) t.album={cover_medium:alb.cover_medium||''}; const rec=addTrack(t,'top'); if(rec&&a.pos[rec.id]==null) a.pos[rec.id]=60+k*30+i; }); }catch(e){} })); }
+  }catch(e){ errorNote=e.message; } fillScreen(); save(); render(); }
+async function checkArtist(id,name){ S.checkArt={id,name}; S.checkScreen=[]; render();
+  try{ const a=await ingestArtist(id,name,8,true); S.checkScreen=Object.keys(a.pos).map(Number).filter(x=>T(x)&&!S.seen[x]).sort((x,y)=>a.pos[x]-a.pos[y]).slice(0,8); }catch(e){ errorNote=e.message; }
+  save(); render(); }
+
+/* ---------- Audio previews ---------- */
+const audio=new Audio(); let playingId=null; audio.addEventListener('ended',()=>{ playingId=null; paintPlay(); }); audio.addEventListener('error',()=>{ playingId=null; paintPlay(); });
+function playPreview(id){ const t=T(id); if(!t||!t.p) return; if(playingId===id){ audio.pause(); playingId=null; } else { audio.src=t.p; audio.play().catch(()=>{}); playingId=id; } paintPlay(); }
+function paintPlay(){ document.querySelectorAll('.play').forEach(b=>{ const on=(+b.dataset.v===playingId); b.dataset.on=on?'1':'0'; b.textContent=on?'■':'▶'; }); }
+const playBtn=t=>`<button class="play" data-act="play" data-v="${t.id}" ${t.p?'':'disabled'} title="30-second preview" data-on="${playingId===t.id?'1':'0'}">${playingId===t.id?'■':'▶'}</button>`;
+
+/* ---------- Ranking: a Bradley–Terry preference model with shared artist/genre/era factors, refitted to all your picks after every pick ---------- */
+const TOPN=()=>Math.min(S.target,S.loves.length);
+const games=id=>S.g[id]||0; const wins=id=>S.w[id]||0; const losses=id=>games(id)-wins(id); const skips=id=>((S.sk||{})[id]||0);
+const M=()=>S.M||(S.M={th:{},va:{},s:{},f:{a:{},g:{},d:{},c:{}}});
+const gauss=()=>{ let u=0,v=0; while(!u) u=Math.random(); while(!v) v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+function feats(id){ const t=T(id); const a=t&&S.art[t.aid]; const cell=S.tcell[id]; const [dec,gen]=cell?cell.split('|'):[null,null]; const g=(a&&(a.g||G(a.tag)))||(gen&&gen!=='ohw'?gen:null)||null; const ohw=a?isOHW(a):false;
+  return {a:(t&&!ohw)?t.aid:null, g, d:dec||null, c:(cell&&gen!=='ohw')?cell:null}; }
+const sig=x=>1/(1+Math.exp(-x));
+function fit(){ const m=M(); const ids=S.loves; const R=S.hist.filter(h=>h[2]&&loved(h[0])&&loved(h[1])); const fe={}; ids.forEach(id=>fe[id]=feats(id));
+  const s={}; ids.forEach(id=>s[id]=m.s[id]||0); const f={a:{...m.f.a},g:{...m.f.g},d:{...m.f.d},c:{...m.f.c}}; const LS=(globalThis.FITP||{}).LS??0.8, LF=(globalThis.FITP||{}).LF??12.0;
+  const theta=id=>s[id]+(fe[id].a!=null?(f.a[fe[id].a]||0):0)+(fe[id].g?(f.g[fe[id].g]||0):0)+(fe[id].d?(f.d[fe[id].d]||0):0)+(fe[id].c?(f.c[fe[id].c]||0):0);
+  let info={};
+  if(R.length){ for(let it=0;it<400;it++){ const gs={}, gf={a:{},g:{},d:{},c:{}}; const hs={}, hf={a:{},g:{},d:{},c:{}};
+    for(const h of R){ const w=h[2], l=(w===h[0]?h[1]:h[0]); const p=sig(theta(w)-theta(l)); const g=1-p, q=p*(1-p); gs[w]=(gs[w]||0)+g; gs[l]=(gs[l]||0)-g; hs[w]=(hs[w]||0)+q; hs[l]=(hs[l]||0)+q; const fw=fe[w], fl=fe[l];
+      for(const k of ['a','g','d','c']){ const x=fw[k], y=fl[k]; if(x!=null&&y!=null&&x!==y){ gf[k][x]=(gf[k][x]||0)+g; gf[k][y]=(gf[k][y]||0)-g; hf[k][x]=(hf[k][x]||0)+q; hf[k][y]=(hf[k][y]||0)+q; } } }
+    let maxd=0; ids.forEach(id=>{ const step=((gs[id]||0)-LS*s[id])/((hs[id]||0)+LS); s[id]+=0.5*step; maxd=Math.max(maxd,Math.abs(step)); });
+    for(const k of ['a','g','d','c']) for(const x in gf[k]){ const step=(gf[k][x]-LF*(f[k][x]||0))/((hf[k][x]||0)+LF); f[k][x]=(f[k][x]||0)+0.3*step; maxd=Math.max(maxd,Math.abs(step)); }
+    if(maxd<1e-4) break; } }
+  ids.forEach(id=>info[id]=LS); for(const h of R){ const w=h[2], l=(w===h[0]?h[1]:h[0]); const p=sig(theta(w)-theta(l)); info[w]+=p*(1-p); info[l]+=p*(1-p); }
+  m.th={}; m.va={}; ids.forEach(id=>{ m.th[id]=theta(id); m.va[id]=1/info[id]; }); m.s=s; m.f=f; }
+function prior(id){ const t=T(id); const a=t&&S.art[t.aid]; let v=0; const k=S.tcell[id]; if(k&&S.W[k]!=null) v+=Math.max(-0.5,Math.min(1,0.25*Math.log2(Math.max(0.1,S.W[k])/0.35))); if(a){ if(a.loves>=2) v+=0.15*(a.loves-1); if(a.named) v+=0.2; } return Math.min(1.2,v); }
+const theta=id=>(M().th[id]??0); const sd=id=>Math.sqrt(M().va[id]??2);
+const dscore=id=>theta(id)+prior(id)*Math.max(0,1-games(id)/3);
+function factorPart(id){ const m=M(); return (m.th[id]??0)-(m.s[id]??0); }
+function boost(id){ return Math.abs(factorPart(id))*40; }
+const settledFlag=()=>S.settledAt!=null; const capped=()=>!settledFlag()&&S.hist.length>=Math.round(S.loves.length*(TOPN()>10?2.2:3));
+let PC=null; function probs(){ if(PC&&PC.n===S.hist.length&&PC.k===S.loves.length+':'+S.target) return PC.P; const ids=S.loves, N=TOPN(), n=ids.length, SM=240; const th=ids.map(dscore), sdv=ids.map(id=>sd(id)*0.55); const inN={}, first={}, top3={};
+  for(let k=0;k<SM;k++){ const sm=ids.map((id,i)=>({id,v:th[i]+sdv[i]*gauss()})).sort((x,y)=>y.v-x.v); for(let i=0;i<n;i++){ const id=sm[i].id; if(i<N) inN[id]=(inN[id]||0)+1; if(i===0) first[id]=(first[id]||0)+1; if(i<3) top3[id]=(top3[id]||0)+1; } }
+  const P={}; ids.forEach(id=>P[id]={inN:(inN[id]||0)/SM, first:(first[id]||0)/SM, top3:(top3[id]||0)/SM}); PC={n:S.hist.length,k:S.loves.length+':'+S.target,P}; return P; }
+function waiting(id){ if(settledFlag()) return false; const L=losses(id); if(L>=2&&wins(id)<=L-2) return true; if(games(id)>=3){ const P=probs()[id]; if(P&&P.inN<0.03) return true; } return false; }
+const alive=id=>!waiting(id);
+function ranked(){ const late=settledFlag(); const base=S.loves.slice().sort((x,y)=>(late?0:((alive(y)?1:0)-(alive(x)?1:0)))||(dscore(y)-dscore(x))||(wins(y)-wins(x))||(S.loves.indexOf(x)-S.loves.indexOf(y)));
+  if(S.manual){ const pos=new Map(S.manual.map((id,i)=>[id,i])); const inM=base.filter(id=>pos.has(id)).sort((x,y)=>pos.get(x)-pos.get(y)); return inM.concat(base.filter(id=>!pos.has(id))); } return base; }
+function metCount(a,b){ let n=0; for(const h of S.hist){ if((h[0]===a&&h[1]===b)||(h[0]===b&&h[1]===a)) n++; } return n; }
+function lastMeeting(a,b){ for(let k=S.hist.length-1;k>=0;k--){ const h=S.hist[k]; if((h[0]===a&&h[1]===b)||(h[0]===b&&h[1]===a)) return h[2]; } return null; }
+const aliveIds=()=>S.loves.filter(alive);
+const phase=()=>settledFlag()?3:1;
+function showdowns(R){ const N=TOPN(); const out=[]; const t=R.slice(0,3); for(let i=0;i<t.length;i++) for(let j=i+1;j<t.length;j++){ const w=lastMeeting(t[i],t[j]); if((w!==t[i]&&w!==0)||(i===0&&j===1&&metCount(t[0],t[1])<2)) out.push([t[i],t[j]]); }
+  if(R.length>N){ const w=lastMeeting(R[N-1],R[N]); if(w!==R[N-1]&&w!==0) out.push([R[N-1],R[N]]); } return out; }
+function ambiguous(){ const P=probs(); const N=TOPN(); const lo=N<=10?0.25:0.3, hi=1-lo; return S.loves.filter(id=>{ const p=P[id].inN; return p>lo&&p<hi; }).length; }
+function status(){ const R=ranked(); const P=probs(); const N=TOPN(); const first=R[0]?P[R[0]].first:0; const top3=R.slice(0,3).map(id=>P[id].top3); const amb=ambiguous(); const zone=R.filter(alive).slice(0,Math.min(R.length,N+2)); const need=N<=10?3:2; const played=zone.length?zone.filter(id=>games(id)>=need).length/zone.length:1;
+  return {first, top3min:top3.length?Math.min(...top3):0, amb, played, sd:showdowns(R).length}; }
+function checkSettled(){ if(settledFlag()) return true; const N=TOPN(); const R=ranked(); if(R.length<2) return false;
+  const top=R.slice(0,N); const prev=S.lastTop||[]; const same=prev.length===top.length&&top.every(id=>prev.includes(id))&&top.slice(0,3).join()===prev.slice(0,3).join(); S.stable=same?(S.stable||0)+1:0; S.lastTop=top;
+  const st=status(); const easy=N>10; const ok=st.played>=1&&st.first>=(easy?0.6:0.7)&&st.top3min>=(easy?0.5:0.6)&&st.amb<=(easy?5:2)&&st.sd===0&&S.stable>=4;
+  if(ok){ S.settledAt=S.hist.length; PC=null; return true; } return false; }
+function settledScore(){ if(settledFlag()) return 1; const st=status(); const N=TOPN(); const p=[st.played, Math.min(1,st.first/(N>10?0.6:0.7)), Math.max(0,1-Math.max(0,st.amb-(N>10?5:2))/6), Math.min(1,(S.stable||0)/4)]; return 0.3*p[0]+0.3*p[1]+0.25*p[2]+0.15*p[3]; }
+const settled=()=>settledFlag()||capped();
+let pairKind='pick', pairShownAt=0;
+function importance(i,id){ const N=TOPN(); const P=probs()[id]; if(settledFlag()){ return i<N?0.3:i<N+20?0.9:0.15; } const base=i<3?1:i<Math.min(10,N)?0.6:0.2; const mem=P?Math.min(1,4*P.inN*(1-P.inN)):0; return Math.max(base,mem); }
+function nextPair(){ const L=S.loves; if(L.length<2) return null; const late=settledFlag(); const cands=late?L:L.filter(alive); if(cands.length<2) return null;
+  const cs=new Set(cands); const R=ranked().filter(id=>cs.has(id)); const recent=new Set(S.hist.slice(-2).flatMap(h=>[h[0],h[1]])); const recent2=new Set(S.hist.slice(-4).flatMap(h=>[h[0],h[1]]));
+  if(!late){ const sdn=showdowns(R).filter(p=>!recent.has(p[0])&&!recent.has(p[1])); if(sdn.length&&status().played>=0.8){ const p=sdn[Math.floor(Math.random()*sdn.length)]; return Math.random()<.5?p:[p[1],p[0]]; } }
+  let best=null, bv=-1; const span=late?12:9;
+  for(let i=0;i<R.length;i++){ const ia=importance(i,R[i]); for(let j=i+1;j<Math.min(R.length,i+1+span);j++){ const a=R[i], b=R[j];
+      const p=sig(dscore(a)-dscore(b)); const info=4*p*(1-p); const unc=(sd(a)+sd(b))/2.8; const imp=ia+importance(j,b);
+      const rec=Math.abs((wins(a)-losses(a))-(wins(b)-losses(b))); let v=info*unc*imp/(1+0.25*rec);
+      const met=metCount(a,b); if(met) v*=Math.pow(0.2,met); if(recent.has(a)) v*=0.15; if(recent.has(b)) v*=0.15; if(recent2.has(a)) v*=0.6; if(recent2.has(b)) v*=0.6; v*=0.85+Math.random()*0.3;
+      if(v>bv){ bv=v; best=[a,b]; } } }
+  if(!best) best=[R[0],R[1]]; return Math.random()<.5?best:[best[1],best[0]]; }
+let current=null; const pairValid=p=>p&&loved(p[0])&&loved(p[1]);
+function decide(winner){ if(!pairValid(current)) return; snapshot(); const [a,b]=current; const loser=winner===a?b:a; S.hist.push([a,b,winner,phase()]);
+  S.g[winner]=games(winner)+1; S.g[loser]=games(loser)+1; S.w[winner]=(S.w[winner]||0)+1; S.manual=null; PC=null;
+  fit(); checkSettled(); current=nextPair(); save(); render(); }
+function skipPair(){ if(!pairValid(current)) return; snapshot(); const [a,b]=current; S.hist.push([a,b,0,phase()]); if(!S.sk) S.sk={}; S.sk[a]=(S.sk[a]||0)+1; S.sk[b]=(S.sk[b]||0)+1; PC=null;
+  current=nextPair(); save(); render(); }
+function rebuildModel(){ S.M=null; PC=null; fit(); }
+function move(id,dir){ const ids=ranked(); const i=ids.indexOf(id), j=i+dir; if(i<0||j<0||j>=ids.length) return; [ids[i],ids[j]]=[ids[j],ids[i]]; S.manual=ids; save(); render(); }
+function exportText(){ const R=ranked().slice(0,S.target); return 'My Top '+R.length+' songs of all time\n\n'+R.map((id,i)=>`${i+1}. ${T(id).t} — ${T(id).a}`).join('\n'); }
+/* ---------- Views ---------- */
+let searchTerm='', searchRes=null, searching=false, acRes=[], acTimer=null, acTerm='', pingErr=null, pinged=false;
+
+function acBox(placeholder){ return `<div class="searchbar"><input id="ac" type="search" placeholder="${placeholder}" value="${esc(acTerm)}" autocomplete="off"></div><div class="chips" id="ac-res" style="margin-top:8px">${acRes.map(a=>`<button class="chip" data-act="ac-pick" data-v="${a.id}" data-name="${esc(a.name)}">${esc(a.name)}</button>`).join('')}</div>`; }
+function acInput(val){ acTerm=val; clearTimeout(acTimer); if(val.trim().length<2){ acRes=[]; paintAc(); return; }
+  acTimer=setTimeout(async()=>{ try{ acRes=(await findArtists(val.trim())).map(a=>({id:a.id,name:a.name})); }catch(e){ acRes=[]; } paintAc(); },300); }
+function paintAc(){ const el=document.getElementById('ac-res'); if(el) el.innerHTML=acRes.map(a=>`<button class="chip" data-act="ac-pick" data-v="${a.id}" data-name="${esc(a.name)}">${esc(a.name)}</button>`).join(''); }
+
+function viewSetup(){
+  if(!pinged){ pinged=true; ping().catch(e=>{ pingErr=e.message; if(S.step==='setup') render(); }); }
+  const all=S.decades.length===DECADES.length;
+  return `<h1>Which decades is your favourite music from?</h1>
+  <p class="lede">Tap as many as apply. Everything else is inferred from what you tap, nothing is ever locked out, and it all stays on this device.</p>
+  <div class="chips">${DECADES.map(d=>`<button class="chip" data-act="decade" data-v="${d}" aria-pressed="${S.decades.includes(d)}">${d}</button>`).join('')}<button class="chip more" data-act="decade" data-v="all" aria-pressed="${all}">${all?'Clear':'All of them'}</button></div>
+  ${pingErr?`<div class="notice err"><b>Can’t reach the music catalog from here</b> (${esc(pingErr)}).<br>This page needs a normal browser tab with internet access. File previews inside apps block outside connections.</div>`:''}
+  <button class="btn primary wide" data-act="go-wall" ${S.decades.length?'':'disabled'}>Show me artists</button>
+  <p class="hint">Songs, artwork and 30‑second previews come live from Deezer’s public catalog.</p>`;
+}
+
+const hue=n=>{ let h=0; for(const c of n) h=(h*31+c.charCodeAt(0))%360; return h; };
+function tile(a,picked){ const pic=a.pic||S.pics[a.name.toLowerCase()]||''; const ini=a.name.replace(/^the /i,'').split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  return `<button class="tile" data-act="pick" data-v="${esc(a.name)}" aria-pressed="${picked.has(a.name)}"><span class="ph" style="background:linear-gradient(135deg,hsl(${hue(a.name)},45%,38%),hsl(${(hue(a.name)+40)%360},45%,22%))">${pic?`<img src="${esc(pic)}" alt="" loading="lazy">`:ini}</span><span class="tn">${esc(a.name)}</span></button>`; }
+function patchPic(name,url){ document.querySelectorAll('.tile').forEach(t=>{ if(t.dataset.v===name){ const ph=t.querySelector('.ph'); if(ph&&!ph.querySelector('img')) ph.innerHTML=`<img src="${esc(url)}" alt="">`; } }); }
+function viewWall(){
+  if(!S.wall) S.wall=buildWall(); resolvePics();
+  const picked=new Set(S.picks.map(p=>p.name));
+  if(S.wallPage===2){ if(!S.wall2){ S.wall2=buildWall2(); addRelatedToWall2(); }
+    return `<h1>A few more, in your lanes</h1>
+    <p class="lede">Chosen from what you just tapped: the same genres, the decades either side, and artists people who love yours also love. Tap anyone you’d want on your list.</p>
+    ${S.wall2.length?`<div class="tiles">${S.wall2.map(a=>tile(a,picked)).join('')}</div>`:`<div class="loading"><span class="spin"></span>Finding artists…</div>`}
+    <div class="stat" style="margin-top:14px"><span>Picked <b>${S.picks.length}</b></span></div>
+    <button class="btn primary wide" data-act="go-discover">Find my songs</button>
+    <div class="row-actions"><button class="link" data-act="wall1">Back to the first page</button></div>`; }
+  const rows=S.decades.map(d=>{ const list=S.wall.filter(a=>a.dec===d); if(!list.length) return ''; return `<div class="glabel">${d}</div><div class="tiles">${list.map(a=>tile(a,picked)).join('')}</div>`; }).join('');
+  return `<h1>Tap everyone you love</h1>
+  <p class="lede">A spread of each decade’s genres. What you tap sets the mix; skip anyone you don’t know.</p>
+  ${rows}
+  <div class="stat" style="margin-top:14px"><span>Picked <b>${S.picks.length}</b></span></div>
+  <div class="btnrow">
+    <button class="btn primary" data-act="wall2" ${S.picks.length?'':'disabled'}>More artists like these<small>one more page, better list</small></button>
+    <button class="btn" data-act="go-discover">${S.picks.length?'Find my songs':'Skip, show me songs'}<small>${S.picks.length?'straight to the songs':'you can still search'}</small></button>
+  </div>
+  <div class="row-actions"><button class="link" data-act="step" data-v="setup">Change decades</button></div>`;
+}
+
+const statusText=n=>n<3?'Tap a few to get started.':n<12?`${12-n} more and you can rank a Top 10.`:n<25?'Enough for a Top 10. One more screen makes it sharper.':n<50?'Plenty for a Top 10; keep going only if you want a Top 50.':'Enough for a Top 50.';
+function chipsHtml(){ syncLoves(); const modeArt=S.mode&&S.mode.startsWith('artist:')?S.art[+S.mode.slice(7)]:null; const lovedArts=Object.values(S.art).filter(a=>a.loves>0||a.named).sort((x,y)=>(y.loves-x.loves)||(x.ord-y.ord));
+  return lovedArts.slice(0,10).map(a=>`<button class="chip ${modeArt&&modeArt.id===a.id?'':'more'}" data-act="more" data-v="${a.id}" aria-pressed="${modeArt&&modeArt.id===a.id}">More <b>${esc(a.name)}</b>${a.loves?' · '+a.loves:''}</button>`).join(''); }
+const rankButtons=n=>`<button class="btn primary" data-act="rank" data-v="10" ${n<3?'disabled':''}>Rank my Top 10<small>${n>=3?'a couple of minutes':'needs a few more loves'}</small></button>
+    <button class="btn" data-act="rank" data-v="50" ${n<12?'disabled':''}>Rank my Top 50<small>${n>=50?'about five minutes':'better with 50+ loves'}</small></button>`;
+function compLine(){ const c=S.comp||{}; const parts=Object.entries(c).sort((x,y)=>y[1]-x[1]).map(([k,n])=>`${k}${n>1?' ×'+n:''}`); return parts.length?'This screen: '+parts.join(' · '):''; }
+function patchScreen(before){ const grid=document.querySelector('#app .grid'); if(!grid||S.step!=='discover'){ scheduleRender(); return; }
+  grid.insertAdjacentHTML('beforeend', S.screen.slice(before).map(songCard).join('')); const cl=document.getElementById('compLine'); if(cl) cl.textContent=compLine(); if(S.screen.length>=SCREEN){ const l=document.getElementById('finding'); if(l) l.remove(); } }
+function patchLove(id){ if(S.step!=='discover'&&S.step!=='check'){ render(); return; } const on=loved(id);
+  document.querySelectorAll('.sc[data-v="'+id+'"]').forEach(c=>{ c.dataset.loved=on?'1':'0'; c.setAttribute('aria-pressed',String(on)); });
+  document.querySelectorAll('.pill[data-v="'+id+'"]').forEach(p=>{ p.dataset.on=on?'1':'0'; p.textContent=on?'Loved':'Love'; });
+  const n=S.loves.length; const a=document.getElementById('lovedN'); if(a) a.textContent=n; const b=document.getElementById('statusTxt'); if(b) b.textContent=statusText(n);
+  const c=document.getElementById('artChips'); if(c) c.innerHTML=chipsHtml(); const d=document.getElementById('rankRow'); if(d) d.innerHTML=rankButtons(n); }
+
+function songCard(id){ const t=T(id); return `<div class="sc" data-act="toggle" data-v="${id}" data-loved="${loved(id)?1:0}" role="button" aria-pressed="${loved(id)}">
+  ${t.c?`<img src="${esc(t.c)}" alt="" loading="lazy">`:`<div class="noart"></div>`}
+  ${playBtn(t)}<button class="heart" data-act="toggle" data-v="${id}" aria-label="Love">♥</button>
+  <div class="sc-body"><div class="sc-t">${esc(t.t)}</div><div class="sc-a">${esc(t.a)}</div></div></div>`; }
+
+function viewDiscover(){
+  fillScreen();
+  const n=S.loves.length; const modeArt=S.mode&&S.mode.startsWith('artist:')?S.art[+S.mode.slice(7)]:null; const weak=S.screenNo>0&&S.lastLoves<3;
+  const how = S.screenNo===0 ? 'Dealt from the charts of your decades and genres, weighted by the artists you tapped, plus a few all‑time names and a one‑hit wonder.'
+    : modeArt ? `Showing more by ${esc(modeArt.name)}. Press next to go back to the mix.`
+    : weak ? `Only ${S.lastLoves} love${S.lastLoves===1?'':'s'} last screen, so this one explores: genres you haven’t rated${S.weak>=2?' and the neighbouring decades':''}.`
+    : (()=>{ const ts=tasteSummary(); return `${S.lastLoves} loves last screen.${ts&&ts.up.length?' Leaning in: '+ts.up.join(', ')+'.':''}${ts&&ts.down.length?' Leaning out: '+ts.down.join(', ')+'.':''} Every card you passed counts too.`; })();
+  const busy=poolBusy>0||poolRunning||canonBusy; const pl=poolsLoaded(), pt=poolsTotal();
+  return `<h1>Tap the songs you love</h1>
+  <p class="lede">Four screens is usually enough for a Top 10. Press ▶ to hear a preview.</p>
+  <div class="stat"><span>Loved <b id="lovedN">${n}</b></span><span>Screen <b>${S.screenNo+1}</b></span><span id="statusTxt">${statusText(n)}</span></div>
+  <p class="meta" style="margin-top:8px">${how}</p>
+  <p class="comp" id="compLine">${compLine()}</p>
+  ${busy&&S.screen.length<SCREEN?`<div class="loading" id="finding"><span class="spin"></span>Loading the charts for your decades (${pl} of ${pt})…</div>`:''}
+  ${errorNote?`<div class="notice err">Some songs couldn’t be loaded (${esc(errorNote)}). If nothing appears at all, this page is probably running inside a file preview that blocks outside connections; open it in a normal browser tab instead.</div>`:''}
+  <div class="chips" id="artChips" style="margin-top:14px">${chipsHtml()}</div>
+  ${S.screen.length?`<div class="grid">${S.screen.map(songCard).join('')}</div>`:`<div class="card empty">${busy?'Loading your first screen…':'Nothing left to show here. Try search, or tap “More” on an artist.'}</div>`}
+  <button class="btn wide" data-act="next">Next 12 songs</button>
+  <div class="btnrow" id="rankRow" style="grid-template-columns:1fr 1fr;margin-top:10px">${rankButtons(n)}</div>
+  <div class="row-actions"><button class="link" data-act="undo">Undo</button></div>
+  <h2>Can’t find a song? Search for it</h2>
+  <div class="searchbar"><input id="q" type="search" placeholder="Song or artist" value="${esc(searchTerm)}" autocomplete="off"><button class="btn" data-act="search">Search</button></div>
+  ${searching?`<div class="loading"><span class="spin"></span>Searching…</div>`:''}
+  ${searchRes?(searchRes.length?`<ul class="results">${searchRes.map(id=>{const t=T(id);return `<li>${t.c?`<img class="thumb" src="${esc(t.c)}" alt="">`:'<div class="thumb"></div>'}<div><div class="t">${esc(t.t)}</div><div class="a">${esc(t.a)}</div></div><div class="side-foot">${playBtn(t)}<button class="pill" data-act="toggle" data-v="${id}" data-on="${loved(id)?1:0}">${loved(id)?'Loved':'Love'}</button></div></li>`;}).join('')}</ul>`:`<p class="meta">No results for that.</p>`):''}`;
+}
+
+function viewCheck(){
+  const n=S.loves.length; const a=S.checkArt;
+  return `<h1>Anyone missing?</h1>
+  <p class="lede">Last chance before ranking. A song from your childhood, something in another language, an album you wore out, a song you’d play at your own funeral. Type the artist and tap a name.</p>
+  ${acBox('Artist name')}
+  ${a?`<h2>${esc(a.name)}</h2>${S.checkScreen.length?`<div class="grid">${S.checkScreen.map(songCard).join('')}</div>`:`<div class="loading"><span class="spin"></span>Loading songs…</div>`}`:''}
+  <div class="stat" style="margin-top:16px"><span>Loved <b id="lovedN">${n}</b></span></div>
+  <button class="btn primary wide" data-act="go-rank">Looks complete, rank my Top ${S.target}</button>
+  <div class="row-actions"><button class="link" data-act="step" data-v="discover">Back to the songs</button></div>`;
+}
+
+function viewRank(){
+  const n=S.loves.length; if(n<2) return `<h1>Rank</h1><div class="card empty">Love at least two songs first.<br><br><button class="btn primary" data-act="step" data-v="discover">Back to the songs</button></div>`;
+  if(!pairValid(current)) current=nextPair();
+  if(!current){ S.step='list'; save(); return viewList(); }
+  const [a,b]=current.map(T); const pct=Math.min(100,settledScore()*100); const isSettled=settled(); const ph=phase(); const inRun=aliveIds().length; const st=status(); const N=TOPN();
+  const label = settledFlag()?'Settled':capped()?'Stopped at the cap (provisional)':pct<40?'Taking shape':pct<80?'Getting there':'Nearly settled';
+  const side=t=>`<div class="side"><button class="duel-card" data-act="win" data-v="${t.id}"><div class="art">${t.c?`<img src="${esc(t.c)}" alt="">`:'<div class="noart"></div>'}<span class="rec">${wins(t.id)}–${losses(t.id)}</span></div><p class="song-title">${esc(t.t)}</p><p class="song-artist">${esc(t.a)}</p></button><div class="side-foot">${playBtn(t)}</div></div>`;
+  return `<h1>Which one stays?</h1>
+  <p class="lede">${ph===1?`Each pick lands where your list is least sure: the top of it and the cut line at ${N}. Similar records meet; a song at 0–2 waits.`:`Your top ${N} is set. Now working on the places below it; everything is back in.`}</p>
+  <div class="bar teal"><i style="width:${pct.toFixed(1)}%"></i></div>
+  <div class="stat"><span><b>${S.hist.length}</b> picks</span><span>${label}</span><span class="alive">${ph===3?'all back in':inRun+' of '+n+' still in'}</span></div>
+  <p class="meta" style="margin-top:6px">${Math.round(st.first*100)}% sure of your #1 · ${st.amb===0?'cut line clear':st.amb+' song'+(st.amb===1?'':'s')+' undecided at the cut line'}${st.sd?' · '+st.sd+' showdown'+(st.sd===1?'':'s')+' to go':''}</p>
+  ${isSettled?`<button class="btn primary wide" data-act="step" data-v="list">${settledFlag()?'Settled. ':'That’s enough for now. '}Show my Top ${N}</button>`:''}
+  <div class="duel">${side(a)}<div class="vs">VS</div>${side(b)}</div>
+  <div class="row-actions"><button class="btn" data-act="skip">Can’t decide, skip<small>no effect on either song</small></button><button class="link" data-act="undo">Undo</button>${isSettled?'':`<button class="link" data-act="step" data-v="list">Show my list so far</button>`}</div>
+  <p class="hint">Keyboard: <kbd>←</kbd> left wins, <kbd>→</kbd> right wins, <kbd>↓</kbd> skip, <kbd>Z</kbd> undo.</p>`;
+}
+
+function boostWhy(id){ const f=feats(id), Fs=M().f; const parts=[[f.a!=null?Math.abs(Fs.a[f.a]||0):0,f.a!=null?(T(id).a):''],[f.g?Math.abs(Fs.g[f.g]||0):0,f.g?(GLABEL[f.g]||f.g).toLowerCase():''],[f.d?Math.abs(Fs.d[f.d]||0):0,f.d||'']].sort((x,y)=>y[0]-x[0]); return parts[0][1]||'earlier'; }
+function viewList(){
+  const R=ranked(); if(!R.length) return `<h1>My list</h1><div class="card empty">Nothing here yet.</div>`;
+  const top=R.slice(0,S.target), bench=R.slice(S.target,S.target+10); const n=S.loves.length;
+  const row=(id,i,cls)=>{ const t=T(id); return `<li class="row ${cls} r${i+1}"><span class="rank">${i+1}</span>${t.c?`<img class="thumb" src="${esc(t.c)}" alt="">`:'<div class="thumb"></div>'}<div><div class="t">${esc(t.t)}</div><div class="a">${esc(t.a)} · ${wins(id)}–${losses(id)}${skips(id)?' ('+skips(id)+' skipped)':''}${boost(id)>=15&&games(id)<4?' · <span style="color:var(--teal)">shaped by your '+esc(boostWhy(id))+' picks</span>':''}</div></div><span class="arrows"><button data-act="up" data-v="${id}" title="Move up">▲</button><button data-act="down" data-v="${id}" title="Move down">▼</button></span></li>`; };
+  const podium=top.slice(0,3).map((id,i)=>{ const t=T(id); return `<div class="p p${i+1}">${t.c?`<img src="${esc(t.c)}" alt="">`:'<div class="noart"></div>'}<span class="n">${i+1}</span><div class="cap">${esc(t.t)}<span>${esc(t.a)}</span></div></div>`; }).join('');
+  const art={}; for(const id of top){ art[T(id).a]=(art[T(id).a]||0)+1; } const rep=Object.entries(art).filter(e=>e[1]>1).sort((x,y)=>y[1]-x[1]).slice(0,8);
+  const dec={}; for(const id of top){ const k=S.tcell[id]; if(k) dec[k.split('|')[0]]=(dec[k.split('|')[0]]||0)+1; }
+  const sc=settledScore();
+  const stt=S.hist.length?status():null;
+  const note = !S.hist.length ? 'No head‑to‑heads yet, so this is a provisional order from what you loved. Go to Rank to build the real list.' : settledFlag() ? `Settled: ${Math.round(stt.first*100)}% sure of your #1, cut line clear. Arrows for final tweaks.` : capped() ? `Stopped at the cap, so this is provisional: ${Math.round(stt.first*100)}% sure of your #1, ${stt.amb} undecided at the cut line.` : sc<0.5 ? 'Provisional. More head‑to‑heads will settle it.' : 'Nearly settled; a few more picks would firm up the order.';
+  return `<h1>My Top ${top.length}</h1>
+  <p class="lede">${note}</p>
+  <div class="podium">${podium}</div>
+  ${S.manual?`<p class="meta" style="margin-top:10px">Hand‑ordered. <button class="link" data-act="resetManual">Back to the head‑to‑head order</button></p>`:''}
+  <div class="row-actions">
+    <button class="btn primary" data-act="share">${navigator.share?'Share':'Copy my list'}</button>
+    ${n>=2?`<button class="btn" data-act="step" data-v="rank">${S.hist.length?'Keep comparing':'Start comparing'}</button>`:''}
+    ${S.target===10?`<button class="btn" data-act="extend">Extend to a Top 50</button>`:''}
+    <button class="link" data-act="check">Anyone missing?</button>
+    <button class="link" data-act="step" data-v="discover">Add more songs</button>
+  </div>
+  <ol class="rows">${top.map((id,i)=>row(id,i,i<10?'topten':'bench')).join('')}</ol>
+  ${rep.length?`<h2>Your repeat artists</h2><div class="tags">${rep.map(e=>`<span class="tag">${esc(e[0])} <b>×${e[1]}</b></span>`).join('')}</div>`:''}
+  ${Object.keys(dec).length?`<h2>By decade</h2><div class="tags">${DECADES.filter(d=>dec[d]).map(d=>`<span class="tag">${d} <b>×${dec[d]}</b></span>`).join('')}</div>`:''}
+  ${bench.length?`<h2>Just outside</h2><ol class="rows">${bench.map((id,i)=>row(id,S.target+i,'bench')).join('')}</ol>`:''}
+  <h2>Plain text</h2><textarea class="export" readonly>${esc(exportText())}</textarea>`;
+}
+
+function render(){
+  const reach={setup:true, wall:S.decades.length>0, discover:S.decades.length>0, rank:S.loves.length>=2, list:S.loves.length>=1};
+  const cur=S.step==='check'?'rank':S.step;
+  document.querySelectorAll('.step').forEach(b=>{ const s=b.dataset.step; b.setAttribute('aria-current', s===cur?'step':'false'); b.disabled=!reach[s]; });
+  const app=document.getElementById('app');
+  const ae=document.activeElement; const fid=ae&&(ae.id==='q'||ae.id==='ac')?ae.id:null; const selStart=fid?ae.selectionStart:null;
+  app.innerHTML = S.step==='wall'?viewWall():S.step==='discover'?viewDiscover():S.step==='check'?viewCheck():S.step==='rank'?viewRank():S.step==='list'?viewList():viewSetup();
+  if(fid){ const el=document.getElementById(fid); if(el){ el.focus(); try{ el.setSelectionRange(selStart,selStart);}catch(e){} } }
+}
+function setStep(s){ S.step=s; if(s==='rank') current=null; acRes=[]; acTerm=''; save(); render(); if(s==='discover'){ loadPools(); ensureCanon(); } window.scrollTo({top:0}); }
+function startWall(){ ensureCells(S.decades); if(!S.wall) S.wall=buildWall(); queueCanon(); initWeights(); setStep('wall'); loadPools(); ensureCanon(); resolvePics(); }
+function startDiscover(){ initWeights(); S.screen=[]; S.comp={}; S.screenNo=0; S.lastLoves=0; S.weak=0; S.mode=null; setStep('discover'); resolveNamed().then(()=>{ if(S.step==='discover'&&S.screen.length<SCREEN){ const b=S.screen.length; fillScreen(); if(S.screen.length!==b) patchScreen(b); } }); }
+async function doSearch(){ const q=document.getElementById('q'); searchTerm=(q&&q.value||'').trim(); if(!searchTerm) return; searching=true; searchRes=null; render();
+  try{ const res=await searchTracks(searchTerm); searchRes=[...new Set(res.map(t=>addTrack(t,'search')).filter(Boolean).map(t=>{ const a=artRec(t.aid,t.a,{src:S.art[t.aid]?S.art[t.aid].src:'search'}); if(a.pos[t.id]==null) a.pos[t.id]=99; return t.id; }))]; }
+  catch(e){ searchRes=[]; toast('Search failed: '+e.message); }
+  searching=false; save(); render(); }
+
+/* ---------- Events ---------- */
+document.addEventListener('input', e=>{ if(e.target.id==='ac') acInput(e.target.value); });
+document.addEventListener('click', e=>{
+  const st=e.target.closest('[data-step]'); if(st&&!st.disabled){ if(st.dataset.step==='wall') startWall(); else setStep(st.dataset.step); return; }
+  const b=e.target.closest('[data-act]'); if(!b) return; const v=b.dataset.v;
+  switch(b.dataset.act){
+    case 'decade': { if(v==='all'){ S.decades=S.decades.length===DECADES.length?[]:DECADES.slice(); } else { const i=S.decades.indexOf(v); if(i>=0) S.decades.splice(i,1); else S.decades.push(v); } S.decades.sort((x,y)=>DECADES.indexOf(x)-DECADES.indexOf(y)); S.wall=null; S.wall2=null; S.wallPage=1; S.picks=[]; save(); render(); break; }
+    case 'go-wall': if(S.decades.length) startWall(); break;
+    case 'wall2': S.wallPage=2; S.wall2=null; save(); render(); window.scrollTo({top:0}); break;
+    case 'wall1': S.wallPage=1; save(); render(); window.scrollTo({top:0}); break;
+    case 'pick': { const i=S.picks.findIndex(p=>p.name===v); if(i>=0) S.picks.splice(i,1); else { const w=S.wall.find(a=>a.name===v)||(S.wall2||[]).find(a=>a.name===v); if(w) S.picks.push({name:w.name,tag:w.tag,dec:w.dec,id:w.id}); } initWeights(); save(); b.setAttribute('aria-pressed',String(i<0)); const pc=document.querySelector('.stat b'); if(pc) pc.textContent=S.picks.length; document.querySelectorAll('[data-act="wall2"]').forEach(x=>x.disabled=!S.picks.length); resolveNamed(); loadPools(); break; }
+    case 'go-discover': startDiscover(); break;
+    case 'ac-pick': { const id=+v, name=b.dataset.name; acRes=[]; acTerm=''; checkArtist(id,name); break; }
+    case 'toggle': toggleLove(+v); break;
+    case 'play': e.stopPropagation(); playPreview(+v); break;
+    case 'next': nextScreen(); break;
+    case 'more': moreFrom(+v); break;
+    case 'search': doSearch(); break;
+    case 'rank': { const was=S.target; S.target=+v; if(was!==S.target){ S.settledAt=null; S.stable=0; S.lastTop=null; } rebuildModel(); if(S.audited) setStep('rank'); else setStep('check'); break; }
+    case 'check': setStep('check'); break;
+    case 'go-rank': S.audited=true; S.checkArt=null; S.checkScreen=[]; rebuildModel(); setStep('rank'); break;
+    case 'win': decide(+v); break;
+    case 'skip': skipPair(); break;
+    case 'step': setStep(v); break;
+    case 'up': move(+v,-1); break;
+    case 'down': move(+v,1); break;
+    case 'resetManual': S.manual=null; save(); render(); break;
+    case 'extend': S.target=50; S.manual=null; S.stable=0; S.lastTop=null; S.settledAt=null; S.audited=false; rebuildModel(); setStep('discover'); toast('Add more loves, then rank again'); break;
+    case 'undo': undo(); break;
+    case 'share': { const txt=exportText();
+      if(navigator.share){ navigator.share({title:'My Top '+S.target+' songs',text:txt}).catch(()=>{}); }
+      else if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(()=>toast('Copied'),()=>toast('Select the plain text below to copy')); }
+      else toast('Select the plain text below to copy'); break; }
+  }
+});
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'){ if(e.key==='Enter'){ e.preventDefault(); if(e.target.id==='q') doSearch(); else if(e.target.id==='ac'&&acRes.length){ const a=acRes[0]; acRes=[]; acTerm=''; checkArtist(a.id,a.name); } } return; }
+  const k=e.key.toLowerCase();
+  if(S.step==='rank'){ if(!pairValid(current)) return; if(k==='arrowleft') decide(current[0]); else if(k==='arrowright') decide(current[1]); else if(k==='arrowdown') skipPair(); else if(k==='z') undo(); else return; e.preventDefault(); }
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{ if(confirm('Start over? This clears your answers, loves and rankings.')){ S=fresh(); undoStack=[]; current=null; searchRes=null; searchTerm=''; acRes=[]; acTerm=''; errorNote=null; audio.pause(); playingId=null; save(); render(); toast('Fresh start'); } });
+render(); if(S.step==='discover'){ loadPools(); ensureCanon(); }
+/* ---------- Installable app ---------- */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+let installEvt=null; const installBtn=document.getElementById('installBtn');
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); installEvt=e; installBtn.hidden=false; });
+installBtn.addEventListener('click', async()=>{ if(!installEvt) return; installEvt.prompt(); const r=await installEvt.userChoice.catch(()=>null); installEvt=null; installBtn.hidden=true; if(r&&r.outcome==='accepted') toast('Installed'); });
+window.addEventListener('appinstalled', ()=>{ installBtn.hidden=true; });
+</script>
+</body>
+</html>
