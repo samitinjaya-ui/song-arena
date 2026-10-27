@@ -158,6 +158,29 @@ kbd{ font:inherit; font-size:12px; border:1px solid var(--line); border-bottom-w
 textarea.export{ width:100%; min-height:150px; margin-top:10px; border:1px solid var(--line); border-radius:12px; padding:12px; font:inherit; font-size:14px; background:var(--surface); color:var(--ink); }
 #toast{ position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%) translateY(20px); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:999px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .15s,transform .15s; z-index:20; max-width:90vw; text-align:center; }
 #toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
+/* swipe deck */
+.deck{ position:relative; width:min(92vw,420px); aspect-ratio:1/1.28; margin:14px auto 0; }
+.swipecard{ position:absolute; inset:0; border-radius:22px; overflow:hidden; background:var(--surface2); box-shadow:0 18px 40px rgba(0,0,0,.45); user-select:none; -webkit-user-select:none; touch-action:none; will-change:transform; }
+.swipecard img{ width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
+.swipecard .noart{ width:100%; height:100%; background:linear-gradient(135deg,#3a3f5a,#20233a); }
+.swipecard.under{ transform:scale(.95) translateY(14px); opacity:.6; }
+.swipecard .sc-body{ padding:60px 16px 16px; }
+.swipecard .sc-t{ font-size:22px; }
+.swipecard .sc-a{ font-size:14px; }
+.swipecard .why{ margin-top:8px; display:inline-block; font-size:12px; font-weight:600; color:#fff; background:rgba(255,255,255,.16); border-radius:999px; padding:3px 9px; }
+.swipecard .sc-play{ position:absolute; left:12px; top:12px; }
+.swipecard .sc-play .play{ width:44px; height:44px; }
+.stamp{ position:absolute; top:22px; padding:6px 12px; border:3px solid; border-radius:10px; font-weight:800; font-size:22px; letter-spacing:.04em; opacity:0; transform:rotate(-14deg); transition:opacity .1s; pointer-events:none; }
+.stamp.love{ right:18px; color:#5ef0a0; border-color:#5ef0a0; }
+.stamp.no{ left:18px; color:var(--accent); border-color:var(--accent); transform:rotate(14deg); }
+.stamp.unk{ left:50%; top:auto; bottom:90px; transform:translateX(-50%); color:#9fc5ff; border-color:#9fc5ff; font-size:18px; }
+.swipecard[data-hint="love"] .stamp.love,.swipecard[data-hint="no"] .stamp.no,.swipecard[data-hint="unk"] .stamp.unk{ opacity:1; }
+.swipebtns{ display:flex; justify-content:center; gap:22px; margin-top:16px; }
+.sbtn{ width:64px; height:64px; border-radius:50%; border:2px solid var(--line); background:var(--surface); font-size:26px; cursor:pointer; display:grid; place-items:center; transition:transform .1s; }
+.sbtn:active{ transform:scale(.92); } .sbtn:disabled{ opacity:.35; }
+.sbtn.no{ color:var(--accent); border-color:rgba(255,77,109,.5); }
+.sbtn.love{ color:#5ef0a0; border-color:rgba(94,240,160,.5); width:72px; height:72px; font-size:30px; }
+.sbtn.unk{ color:#9fc5ff; border-color:rgba(159,197,255,.5); width:52px; height:52px; font-size:20px; align-self:center; }
 </style>
 </head>
 <body>
@@ -252,9 +275,9 @@ const searchTracks=term=>api('search?q='+encodeURIComponent(term)+'&limit=15',tr
 const ping=()=>api('genre');
 
 /* ---------- State ---------- */
-const KEY='song-arena-v8'; let S;
-function fresh(){ return {v:8, step:'setup', sim:[], resp:[], shownAt:{}, TM:null, W0:{}, decades:[], wall:null, wall2:null, wallPage:1, pics:{}, picks:[], tracks:{}, loves:[], seen:{}, art:{}, canonQ:[], cells:{}, W:{}, exp:{}, tcell:{}, screen:[], screenNo:0, lastLoves:0, weak:0, mode:null, target:10, audited:false, checkArt:null, checkScreen:[], r:{}, g:{}, w:{}, hist:[], stable:0, lastTop:null, manual:null, tick:0}; }
-function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); return s&&s.v===8?s:null; }catch(e){ return null; } }
+const KEY='song-arena-v9'; let S;
+function fresh(){ return {v:9, step:'setup', ui:'swipe', deckIdx:0, dec:{}, why:{}, sim:[], resp:[], shownAt:{}, TM:null, W0:{}, decades:[], wall:null, wall2:null, wallPage:1, pics:{}, picks:[], tracks:{}, loves:[], seen:{}, art:{}, canonQ:[], cells:{}, W:{}, exp:{}, tcell:{}, screen:[], screenNo:0, lastLoves:0, weak:0, mode:null, target:10, audited:false, checkArt:null, checkScreen:[], r:{}, g:{}, w:{}, hist:[], stable:0, lastTop:null, manual:null, tick:0}; }
+function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); return s&&s.v===9?s:null; }catch(e){ return null; } }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 S=load()||fresh();
 const T=id=>S.tracks[id]; const loved=id=>S.loves.includes(id);
@@ -320,7 +343,7 @@ const TK=['c','g','d','a','s','t'];
 function tf(id){ const t=T(id); const a=t&&S.art[t.aid]; const cell=S.tcell[id]; const [dec,gen]=cell?cell.split('|'):[null,null]; const g=(a&&(a.g||G(a.tag)))||(gen&&gen!=='ohw'?gen:null)||null; const pos=a?a.pos[id]:null; const tier=pos==null?'unk':pos<=1?'hit':pos<50?'deep':pos===50?'chart':'search'; return {c:cell||null,g,d:dec||null,a:t?String(t.aid):null,s:a?a.src:null,t:tier}; }
 function tlin(f,P){ let z=P.b; for(const k of TK){ const x=f[k]; if(x!=null&&P[k][x]!=null) z+=P[k][x]; } return z; }
 function tasteFit(){ const rows=[]; const now=S.screenNo; const sigm=x=>1/(1+Math.exp(-x));
-  for(const r of S.resp){ if(!T(r.id)) continue; rows.push({f:tf(r.id), y:loved(r.id)?1:0, w:Math.max(0.15,Math.pow(0.7,now-r.scr))}); }
+  for(const r of S.resp){ if(!T(r.id)) continue; const lv=loved(r.id); rows.push({f:tf(r.id), y:lv?1:0, w:Math.max(0.15,Math.pow(0.7,now-r.scr))*((!lv&&r.k==='unk')?0.2:1)}); }
   const m=S.M; for(const h of S.hist){ if(!h[2]||!T(h[0])||!T(h[1])) continue; const w=h[2], l=h[2]===h[0]?h[1]:h[0]; const p=(m&&m.th)?sigm((m.th[w]??0)-(m.th[l]??0)):0.5; const wt=0.1+0.6*(1-p); rows.push({f:tf(w),y:1,w:wt}); rows.push({f:tf(l),y:0,w:wt}); }
   const P={b:0,c:{},g:{},d:{},a:{},s:{},t:{}}; const LAM={c:1,g:1,d:1,a:2,s:1,t:1};
   if(rows.length){ for(let it=0;it<150;it++){ let gb=0,hb=0.5; const gr={},hs={}; TK.forEach(k=>{gr[k]={};hs[k]={};});
@@ -374,7 +397,7 @@ function gLoves(){ const m={}; for(const id of S.loves){ const t=T(id); const a=
 function fillScreen(){ syncLoves();
   const usedA=new Set(S.screen.map(id=>T(id)&&T(id).aid)); const comp=S.comp||(S.comp={});
   const laneOf=id=>{ const t=T(id); const a=t&&S.art[t.aid]; const k=S.tcell[id]; return (a&&(a.g||G(a.tag)))||(k?k.split('|')[1]:null)||null; }; const laneN={}; S.screen.forEach(id=>{ const l=laneOf(id); if(l) laneN[l]=(laneN[l]||0)+1; });
-  const push=(id,label)=>{ if(S.screen.length>=SCREEN) return false; const l=laneOf(id); if(l&&(laneN[l]||0)>=7) return false; if(l) laneN[l]=(laneN[l]||0)+1; S.screen.push(id); usedA.add(T(id).aid); comp[label]=(comp[label]||0)+1; const k=S.tcell[id]; if(k) S.exp[k]=(S.exp[k]||0)+1; return true; };
+  const push=(id,label)=>{ if(S.screen.length>=SCREEN) return false; const l=laneOf(id); if(l&&(laneN[l]||0)>=7) return false; if(l) laneN[l]=(laneN[l]||0)+1; S.screen.push(id); S.why[id]=label; usedA.add(T(id).aid); comp[label]=(comp[label]||0)+1; const k=S.tcell[id]; if(k) S.exp[k]=(S.exp[k]||0)+1; return true; };
   const left=(label,cap)=>Math.max(0,cap-(comp[label]||0)); const has=label=>Object.keys(comp).some(k=>k.startsWith(label));
   const add=(a,label)=>{ if(S.screen.length>=SCREEN||usedA.has(a.id)) return false; const t=bestTrack(a); if(t==null) return false; push(t,label); return true; };
   const take=(list,n,label)=>{ for(const a of list){ if(n<=0) break; if(add(a,label)) n--; } };
@@ -391,7 +414,7 @@ function fillScreen(){ syncLoves();
   // 3. related artists
   { let n=Math.min(room(),left('similar artists',weak?1:2)); for(const a of arts.filter(a=>a.src==='related'&&a.ready&&a.shown===0).sort((x,y)=>y.via-x.via)){ if(n<=0) break; if(add(a,'similar artists')) n--; } }
   // 4. second chances: passed once, but supported by something else you did → a deeper cut
-  { let n=Math.min(room(),left('second chance',2)); for(const a of arts.filter(a=>a.ready&&a.loves===0&&a.passes===1&&!a.secondChance&&(a.named||laneLoved(a.g||G(a.tag))||a.src==='related'||a.src==='radio')).sort((x,y)=>pLove(bestTrack(y,2)??bestTrack(y))-pLove(bestTrack(x,2)??bestTrack(x)))){ if(n<=0) break; if(a.depth<10&&!a.deepReq){ a.deepReq=true; ingestArtist(a.id,a.name,10,false).catch(()=>{}); } if(addDeep(a,'second chance',2)){ a.secondChance=true; n--; } } }
+  { let n=Math.min(room(),left('second chance',2)); for(const a of arts.filter(a=>a.ready&&a.loves===0&&(a.passes===1||((a.unk||0)===1&&a.passes===0))&&!a.secondChance&&(a.named||laneLoved(a.g||G(a.tag))||a.src==='related'||a.src==='radio')).sort((x,y)=>pLove(bestTrack(y,2)??bestTrack(y))-pLove(bestTrack(x,2)??bestTrack(x)))){ if(n<=0) break; if(a.depth<10&&!a.deepReq){ a.deepReq=true; ingestArtist(a.id,a.name,10,false).catch(()=>{}); } if(addDeep(a,'second chance',a.passes===1?2:null)){ a.secondChance=true; n--; } } }
   // 5. one-hit wonder of your era
   const ohwCells=Object.keys(S.cells).filter(k=>k.endsWith('|ohw')&&S.cells[k].status==='done'); if(ohwCells.length&&!has('one-hit wonder')&&room()>0){ const k=pickCell(ohwCells); const id=cellPick(k,usedA); if(id!=null) push(id,'one-hit wonder'); }
   // 5b. the canon: all-time names, leaning to genres you love
@@ -414,8 +437,9 @@ function cellHasUnseen(k){ return S.cells[k].songs.some(s=>!loved(s.id)&&!S.seen
 function cellPick(k,usedA){ let best=null,bv=-1,n=0; for(const s of S.cells[k].songs){ const t=T(s.id); if(!t||loved(s.id)||S.seen[s.id]||S.screen.includes(s.id)||usedA.has(t.aid)) continue; const v=(s.n>=2?1:0.75)*(0.4+pLove(s.id))*(1-0.015*n); if(v>bv){ bv=v; best=s.id; } if(++n>=20) break; } return best; }
 function pickCell(keys){ if(!keys.length) return null; const tot=keys.reduce((s,k)=>s+weight(k),0); let r=Math.random()*tot; for(const k of keys){ r-=weight(k); if(r<=0) return k; } return keys[keys.length-1]; }
 function nextScreen(){ snapshot(); let lv=0;
-  for(const id of S.screen){ const a=S.art[T(id).aid]; if(a) a.shown++; const k=S.tcell[id]; if(S.shownAt[id]==null){ S.shownAt[id]=S.screenNo; S.resp.push({id,scr:S.screenNo}); } if(loved(id)) lv++; else { S.seen[id]=true; if(a) a.passes++; if(k) bumpW(k,-0.15); } }
-  S.lastLoves=lv; S.screenNo++; tasteFit(); if(S.mode){ S.mode=null; } else { S.weak=lv<3?S.weak+1:0; if(S.weak>=2) widenDecades(); }
+  for(const id of S.screen){ const a=S.art[T(id).aid]; if(a) a.shown++; const k=S.tcell[id]; const kind=loved(id)?'love':(S.dec[id]==='unk'?'unk':'no'); if(S.shownAt[id]==null){ S.shownAt[id]=S.screenNo; S.resp.push({id,scr:S.screenNo,k:kind}); }
+    if(kind==='love') lv++; else { S.seen[id]=true; if(a){ if(kind==='unk') a.unk=(a.unk||0)+1; else a.passes++; } if(k) bumpW(k,kind==='unk'?-0.05:-0.15); } }
+  S.lastLoves=lv; S.screenNo++; S.deckIdx=0; S.dec={}; tasteFit(); if(S.mode){ S.mode=null; } else { S.weak=lv<3?S.weak+1:0; if(S.weak>=2) widenDecades(); }
   loadPools();
   S.screen=[]; S.comp={}; fillScreen(); save(); render(); loadPools(); ensureCanon(); window.scrollTo({top:0}); }
 function widenDecades(){ const idx=S.decades.map(d=>DECADES.indexOf(d)); const add=new Set(); idx.forEach(i=>{ [i-1,i+1].forEach(j=>{ if(j>=0&&j<DECADES.length&&!S.decades.includes(DECADES[j])) add.add(DECADES[j]); }); });
@@ -435,8 +459,12 @@ async function expandFrom(id){ const t=T(id); if(!t) return; const a=artRec(t.ai
   }catch(e){ errorNote=e.message; } save(); if(S.step==='discover') loadPools(); }
 function toggleLove(id){ snapshot(); const i=S.loves.indexOf(id);
   if(i>=0){ S.loves.splice(i,1); syncLoves(); const k=S.tcell[id]; if(k) bumpW(k,-1); }
-  else { S.loves.push(id); S.manual=null; if(S.shownAt[id]==null){ S.shownAt[id]=S.screenNo; S.resp.push({id,scr:S.screenNo}); } expandFrom(id); }
+  else { S.loves.push(id); S.manual=null; if(S.shownAt[id]==null){ S.shownAt[id]=S.screenNo; S.resp.push({id,scr:S.screenNo,k:'love'}); } expandFrom(id); }
   save(); patchLove(id); }
+function swipeDecide(kind){ const id=S.screen[S.deckIdx]; if(id==null) return; audio.pause(); playingId=null;
+  if(kind==='love'){ if(!loved(id)) toggleLove(id); S.dec[id]='love'; }
+  else { snapshot(); if(loved(id)) toggleLove(id); S.dec[id]=kind; }
+  S.deckIdx++; save(); render(); }
 async function moreFrom(aid){ const a=S.art[aid]; if(!a) return; S.mode='artist:'+aid; S.screen=[]; S.comp={}; render();
   try{ if(a.depth<50) await ingestArtist(aid,a.name,50,true);
     if(!a.albums){ a.albums=true; const al=(await api('artist/'+aid+'/albums?limit=50',true)).data||[]; const studio=al.filter(x=>x.record_type==='album').sort((x,y)=>(y.fans||0)-(x.fans||0)).slice(0,3);
@@ -572,7 +600,7 @@ function chipsHtml(){ syncLoves(); const modeArt=S.mode&&S.mode.startsWith('arti
 const rankButtons=n=>`<button class="btn primary" data-act="rank" data-v="10" ${n<3?'disabled':''}>Rank my Top 10<small>${n>=3?'a couple of minutes':'needs a few more loves'}</small></button>
     <button class="btn" data-act="rank" data-v="50" ${n<12?'disabled':''}>Rank my Top 50<small>${n>=50?'about five minutes':'better with 50+ loves'}</small></button>`;
 function compLine(){ const c=S.comp||{}; const parts=Object.entries(c).sort((x,y)=>y[1]-x[1]).map(([k,n])=>`${k}${n>1?' ×'+n:''}`); return parts.length?'This screen: '+parts.join(' · '):''; }
-function patchScreen(before){ const grid=document.querySelector('#app .grid'); if(!grid||S.step!=='discover'){ scheduleRender(); return; }
+function patchScreen(before){ if(S.ui!=='grid'){ if(S.step==='discover'&&S.deckIdx>=before) scheduleRender(); return; } const grid=document.querySelector('#app .grid'); if(!grid||S.step!=='discover'){ scheduleRender(); return; }
   grid.insertAdjacentHTML('beforeend', S.screen.slice(before).map(songCard).join('')); const cl=document.getElementById('compLine'); if(cl) cl.textContent=compLine(); if(S.screen.length>=SCREEN){ const l=document.getElementById('finding'); if(l) l.remove(); } }
 function patchLove(id){ if(S.step!=='discover'&&S.step!=='check'){ render(); return; } const on=loved(id);
   document.querySelectorAll('.sc[data-v="'+id+'"]').forEach(c=>{ c.dataset.loved=on?'1':'0'; c.setAttribute('aria-pressed',String(on)); });
@@ -585,8 +613,47 @@ function songCard(id){ const t=T(id); return `<div class="sc" data-act="toggle" 
   ${playBtn(t)}<button class="heart" data-act="toggle" data-v="${id}" aria-label="Love">♥</button>
   <div class="sc-body"><div class="sc-t">${esc(t.t)}</div><div class="sc-a">${esc(t.a)}</div></div></div>`; }
 
+function deckDone(){ return S.screen.length>=SCREEN&&S.deckIdx>=S.screen.length; }
+function viewSwipe(){
+  const n=S.loves.length; const busy=poolBusy>0||poolRunning||canonBusy; const modeArt=S.mode&&S.mode.startsWith('artist:')?S.art[+S.mode.slice(7)]:null;
+  const waiting=S.deckIdx>=S.screen.length&&!deckDone();
+  const head=`<div class="stat"><span>Loved <b id="lovedN">${n}</b></span><span>Deck <b>${S.screenNo+1}</b></span><span id="statusTxt">${statusText(n)}</span></div>`;
+  if(deckDone()||(waiting&&!busy&&S.screen.length>0&&S.deckIdx>=S.screen.length)){
+    const c={love:0,no:0,unk:0}; S.screen.forEach(id=>{ c[loved(id)?'love':(S.dec[id]==='unk'?'unk':'no')]++; }); const ts=tasteSummary();
+    return `<h1>Deck ${S.screenNo+1} done</h1>
+    <p class="lede">Loved <b>${c.love}</b> · not for you <b>${c.no}</b> · didn’t know <b>${c.unk}</b>.${ts&&ts.up.length?' Leaning in: '+ts.up.join(', ')+'.':''}${ts&&ts.down.length?' Leaning out: '+ts.down.join(', ')+'.':''}</p>
+    ${head}
+    <p class="comp" id="compLine">${compLine()}</p>
+    <button class="btn primary wide" data-act="next">Next deck of 12</button>
+    <div class="btnrow" id="rankRow" style="margin-top:10px">${rankButtons(n)}</div>
+    <div class="chips" id="artChips" style="margin-top:14px">${chipsHtml()}</div>
+    <div class="row-actions"><button class="link" data-act="undo">Undo last swipe</button><button class="link" data-act="ui" data-v="grid">Switch to grid</button></div>
+    <h2>Can’t find a song? Search for it</h2>
+    <div class="searchbar"><input id="q" type="search" placeholder="Song or artist" value="${esc(searchTerm)}" autocomplete="off"><button class="btn" data-act="search">Search</button></div>
+    ${searching?`<div class="loading"><span class="spin"></span>Searching…</div>`:''}
+    ${searchRes?(searchRes.length?`<ul class="results">${searchRes.map(id=>{const t=T(id);return `<li>${t.c?`<img class="thumb" src="${esc(t.c)}" alt="">`:'<div class="thumb"></div>'}<div><div class="t">${esc(t.t)}</div><div class="a">${esc(t.a)}</div></div><div class="side-foot">${playBtn(t)}<button class="pill" data-act="toggle" data-v="${id}" data-on="${loved(id)?1:0}">${loved(id)?'Loved':'Love'}</button></div></li>`;}).join('')}</ul>`:`<p class="meta">No results for that.</p>`):''}`; }
+  const id=S.screen[S.deckIdx]; const t=id!=null?T(id):null; const nxt=S.screen[S.deckIdx+1]; const tn=nxt!=null?T(nxt):null;
+  const card=(tt,top)=>tt?`<div class="swipecard ${top?'top':'under'}" ${top?'id="swipeTop"':''} data-id="${tt.id}">${tt.c?`<img src="${esc(tt.c)}" alt="" draggable="false">`:'<div class="noart"></div>'}
+      <div class="sc-body"><div class="sc-t">${esc(tt.t)}</div><div class="sc-a">${esc(tt.a)}</div>${top&&S.why[tt.id]?`<div class="why">${esc(S.why[tt.id])}</div>`:''}</div>
+      ${top?`<div class="stamp love">LOVE</div><div class="stamp no">NOPE</div><div class="stamp unk">DON’T KNOW</div>`:''}
+      ${top?`<div class="sc-play">${playBtn(tt)}</div>`:''}</div>`:'';
+  return `<h1>Would it make your all‑time list?</h1>
+  <p class="lede">Swipe right if yes, left if not, down if you don’t know it. Tap the cover for a preview.</p>
+  ${head}
+  <div class="bar"><i style="width:${(S.deckIdx/SCREEN*100).toFixed(0)}%"></i></div>
+  ${modeArt?`<p class="meta">More by ${esc(modeArt.name)}.</p>`:''}
+  ${errorNote?`<div class="notice err">Some songs couldn’t be loaded (${esc(errorNote)}).</div>`:''}
+  <div class="deck">${card(tn,false)}${card(t,true)}${!t?`<div class="card empty" style="position:absolute;inset:0;display:grid;place-items:center">${busy?'<span class="loading"><span class="spin"></span>Dealing…</span>':'Nothing left here. Try search.'}</div>`:''}</div>
+  <div class="swipebtns">
+    <button class="sbtn no" data-act="swipe" data-v="no" aria-label="Not for me" ${t?'':'disabled'}>✕</button>
+    <button class="sbtn unk" data-act="swipe" data-v="unk" aria-label="Don’t know it" ${t?'':'disabled'}>?</button>
+    <button class="sbtn love" data-act="swipe" data-v="love" aria-label="Love it" ${t?'':'disabled'}>♥</button>
+  </div>
+  <div class="row-actions" style="justify-content:center"><button class="link" data-act="undo">Undo</button><button class="link" data-act="rank" data-v="10" ${n<3?'disabled':''}>Done, rank now</button><button class="link" data-act="ui" data-v="grid">Switch to grid</button></div>
+  <p class="hint" style="text-align:center">Keyboard: <kbd>←</kbd> no, <kbd>↓</kbd> don’t know, <kbd>→</kbd> love, <kbd>Z</kbd> undo.</p>`;
+}
 function viewDiscover(){
-  fillScreen();
+  fillScreen(); if(S.ui!=='grid') return viewSwipe();
   const n=S.loves.length; const modeArt=S.mode&&S.mode.startsWith('artist:')?S.art[+S.mode.slice(7)]:null; const weak=S.screenNo>0&&S.lastLoves<3;
   const how = S.screenNo===0 ? 'Dealt from the charts of your decades and genres, weighted by the artists you tapped, plus a few all‑time names and a one‑hit wonder.'
     : modeArt ? `Showing more by ${esc(modeArt.name)}. Press next to go back to the mix.`
@@ -604,7 +671,7 @@ function viewDiscover(){
   ${S.screen.length?`<div class="grid">${S.screen.map(songCard).join('')}</div>`:`<div class="card empty">${busy?'Loading your first screen…':'Nothing left to show here. Try search, or tap “More” on an artist.'}</div>`}
   <button class="btn wide" data-act="next">Next 12 songs</button>
   <div class="btnrow" id="rankRow" style="grid-template-columns:1fr 1fr;margin-top:10px">${rankButtons(n)}</div>
-  <div class="row-actions"><button class="link" data-act="undo">Undo</button></div>
+  <div class="row-actions"><button class="link" data-act="undo">Undo</button><button class="link" data-act="ui" data-v="swipe">Switch to swipe</button></div>
   <h2>Can’t find a song? Search for it</h2>
   <div class="searchbar"><input id="q" type="search" placeholder="Song or artist" value="${esc(searchTerm)}" autocomplete="off"><button class="btn" data-act="search">Search</button></div>
   ${searching?`<div class="loading"><span class="spin"></span>Searching…</div>`:''}
@@ -677,7 +744,17 @@ function render(){
   const ae=document.activeElement; const fid=ae&&(ae.id==='q'||ae.id==='ac')?ae.id:null; const selStart=fid?ae.selectionStart:null;
   app.innerHTML = S.step==='wall'?viewWall():S.step==='discover'?viewDiscover():S.step==='check'?viewCheck():S.step==='rank'?viewRank():S.step==='list'?viewList():viewSetup();
   if(fid){ const el=document.getElementById(fid); if(el){ el.focus(); try{ el.setSelectionRange(selStart,selStart);}catch(e){} } }
+  bindSwipe();
 }
+function flyOut(el,kind){ el.style.transition='transform .18s ease-in, opacity .18s'; el.style.transform=kind==='love'?'translate(120vw,-6vh) rotate(18deg)':kind==='no'?'translate(-120vw,-6vh) rotate(-18deg)':'translate(0,120vh)'; el.style.opacity='0'; }
+let swipeBusy=false;
+function bindSwipe(){ const el=document.getElementById('swipeTop'); if(!el) return; let sx=0,sy=0,dx=0,dy=0,active=false,moved=false;
+  el.addEventListener('pointerdown',e=>{ if(e.target.closest('[data-act]')) return; active=true; moved=false; sx=e.clientX; sy=e.clientY; dx=dy=0; try{ el.setPointerCapture(e.pointerId); }catch(x){} el.style.transition='none'; });
+  el.addEventListener('pointermove',e=>{ if(!active) return; dx=e.clientX-sx; dy=e.clientY-sy; if(Math.abs(dx)>6||Math.abs(dy)>6) moved=true; el.style.transform=`translate(${dx}px,${dy}px) rotate(${dx/18}deg)`; el.dataset.hint=dx>60?'love':dx<-60?'no':(dy>60&&Math.abs(dx)<50)?'unk':''; });
+  const end=e=>{ if(!active) return; active=false; const kind=dx>90?'love':dx<-90?'no':(dy>90&&Math.abs(dx)<70)?'unk':null;
+    if(kind){ if(swipeBusy) return; swipeBusy=true; flyOut(el,kind); setTimeout(()=>{ swipeBusy=false; swipeDecide(kind); },170); }
+    else { el.style.transition='transform .2s'; el.style.transform=''; el.dataset.hint=''; if(!moved){ const id=+el.dataset.id; playPreview(id); } } dx=dy=0; };
+  el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end); }
 function setStep(s){ S.step=s; if(s==='rank') current=null; acRes=[]; acTerm=''; save(); render(); if(s==='discover'){ loadPools(); ensureCanon(); } window.scrollTo({top:0}); }
 function startWall(){ ensureCells(S.decades); if(!S.wall) S.wall=buildWall(); queueCanon(); initWeights(); setStep('wall'); loadPools(); ensureCanon(); resolvePics(); }
 function startDiscover(){ initWeights(); S.screen=[]; S.comp={}; S.screenNo=0; S.lastLoves=0; S.weak=0; S.mode=null; setStep('discover'); resolveNamed().then(()=>{ if(S.step==='discover'&&S.screen.length<SCREEN){ const b=S.screen.length; fillScreen(); if(S.screen.length!==b) patchScreen(b); } }); }
@@ -700,6 +777,8 @@ document.addEventListener('click', e=>{
     case 'go-discover': startDiscover(); break;
     case 'ac-pick': { const id=+v, name=b.dataset.name; acRes=[]; acTerm=''; checkArtist(id,name); break; }
     case 'toggle': toggleLove(+v); break;
+    case 'swipe': { if(swipeBusy) break; const el=document.getElementById('swipeTop'); if(el){ swipeBusy=true; flyOut(el,v); setTimeout(()=>{ swipeBusy=false; swipeDecide(v); },170); } else swipeDecide(v); break; }
+    case 'ui': S.ui=v; save(); render(); break;
     case 'play': e.stopPropagation(); playPreview(+v); break;
     case 'next': nextScreen(); break;
     case 'more': moreFrom(+v); break;
@@ -725,6 +804,7 @@ document.addEventListener('keydown', e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'){ if(e.key==='Enter'){ e.preventDefault(); if(e.target.id==='q') doSearch(); else if(e.target.id==='ac'&&acRes.length){ const a=acRes[0]; acRes=[]; acTerm=''; checkArtist(a.id,a.name); } } return; }
   const k=e.key.toLowerCase();
   if(S.step==='rank'){ if(!pairValid(current)) return; if(k==='arrowleft') decide(current[0]); else if(k==='arrowright') decide(current[1]); else if(k==='arrowdown') skipPair(); else if(k==='z') undo(); else return; e.preventDefault(); }
+  else if(S.step==='discover'&&S.ui!=='grid'){ if(S.deckIdx>=S.screen.length){ if(k==='z') undo(); else if(k==='enter'||k==='arrowright') nextScreen(); else return; e.preventDefault(); return; } const kind=k==='arrowright'?'love':k==='arrowleft'?'no':k==='arrowdown'?'unk':null; if(kind){ const el=document.getElementById('swipeTop'); if(el&&!swipeBusy){ swipeBusy=true; flyOut(el,kind); setTimeout(()=>{ swipeBusy=false; swipeDecide(kind); },170); } } else if(k==='z') undo(); else return; e.preventDefault(); }
 });
 document.getElementById('resetBtn').addEventListener('click', ()=>{ if(confirm('Start over? This clears your answers, loves and rankings.')){ S=fresh(); undoStack=[]; current=null; searchRes=null; searchTerm=''; acRes=[]; acTerm=''; errorNote=null; audio.pause(); playingId=null; save(); render(); toast('Fresh start'); } });
 render(); if(S.step==='discover'){ loadPools(); ensureCanon(); }
